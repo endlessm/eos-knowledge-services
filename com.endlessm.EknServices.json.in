@@ -1,0 +1,24 @@
+{
+    "app-id": "com.endlessm.EknServices",
+    "runtime": "com.endlessm.Platform",
+    "runtime-version": "@BRANCH@",
+    "sdk": "com.endlessm.Sdk",
+    "finish-args": [
+        "--filesystem=/var/lib/flatpak:ro",
+        "--filesystem=~/.local/share",
+        "--env=EKN_SUBSCRIPTIONS_DIR=.local/share/com.endlessm.subscriptions",
+        "--share=network"
+    ],
+    "modules": [
+        {
+            "name": "eos-knowledge-services",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "ssh://git@github.com:endlessm/eos-knowledge-services",
+                    "branch": "@BRANCH@"
+                }
+            ]
+        }
+    ]
+}
