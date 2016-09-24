@@ -5,6 +5,7 @@
     "sdk": "com.endlessm.Sdk",
     "finish-args": [
         "--filesystem=/var/lib/flatpak:ro",
+        "--filesystem=/var/endless-extra/flatpak:ro",
         "--filesystem=~/.local/share",
         "--env=EKN_SUBSCRIPTIONS_DIR=.local/share/com.endlessm.subscriptions",
         "--share=network",
