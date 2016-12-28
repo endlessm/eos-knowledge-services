@@ -23,8 +23,8 @@ imports.searchPath.unshift('resource:///com/endlessm/knowledge/js');
 Gio.Resource.load('%pkgdatadir%/eks-search-provider-v1.gresource')._register();
 imports.searchPath.unshift('resource:///com/endlessm/knowledge-services/search-provider-v1');
 
-const SearchProviderV1 = imports.searchProviderV1;
-let application = new SearchProviderV1.Application();
+const ApplicationV1 = imports.applicationV1;
+let application = new ApplicationV1.Application();
 application.run(['$0'].concat(ARGV));"
 
 exec $DEBUG_COMMAND gjs -c "$SCRIPT" "$@"
