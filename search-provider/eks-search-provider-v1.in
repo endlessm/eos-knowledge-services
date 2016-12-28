@@ -1,8 +1,5 @@
 #!/bin/bash
 
-export GI_TYPELIB_PATH="%ekltypelibdir%${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
-export LD_LIBRARY_PATH="%eklpkglibdir%${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-
 if [ "$GJS_DEBUG_OUTPUT" == "" ]; then
     export GJS_DEBUG_OUTPUT=stderr
 fi
@@ -17,9 +14,6 @@ if [ "$RUN_DEBUG" != "" ]; then
 fi
 
 SCRIPT="const Gio = imports.gi.Gio;
-Gio.Resource.load('%eklpkgdatadir%/eos-knowledge.gresource')._register();
-imports.searchPath.unshift('resource:///com/endlessm/knowledge/js');
-
 Gio.Resource.load('%pkgdatadir%/eks-search-provider-v1.gresource')._register();
 imports.searchPath.unshift('resource:///com/endlessm/knowledge-services/search-provider-v1');
 
