@@ -36,22 +36,8 @@ PKG_PROG_PKG_CONFIG
 # Needed to compile GResources
 AC_SUBST([GLIB_COMPILE_RESOURCES], [`$PKG_CONFIG --variable glib_compile_resources gio-2.0`])
 
-# We need eos-knowledge-lib to build
-PKG_CHECK_MODULES([KNOWLEDGE_LIB], [eos-knowledge-0])
-
-# eos-knowledge-lib paths
-AC_SUBST([EKL_PKGDATADIR], [`$PKG_CONFIG --variable pkgdatadir eos-knowledge-0`])
-if test "$EKL_PKGDATADIR" == ""; then
-   AC_MSG_ERROR([cannot locate eos-knowledge-0 pkgdatadir])
-fi
-AC_SUBST([EKL_PKGLIBDIR], [`$PKG_CONFIG --variable pkglibdir eos-knowledge-0`])
-if test "$EKL_PKGLIBDIR" == ""; then
-   AC_MSG_ERROR([cannot locate eos-knowledge-0 pkglibdir])
-fi
-AC_SUBST([EKL_TYPELIBDIR], [`$PKG_CONFIG --variable typelibdir eos-knowledge-0`])
-if test "$EKL_TYPELIBDIR" == ""; then
-   AC_MSG_ERROR([cannot locate eos-knowledge-0 typelibdir])
-fi
+# We need the eos-knowledge-content library
+PKG_CHECK_MODULES([KNOWLEDGE_CONTENT], [eos-knowledge-content-0])
 
 AX_PROG_GJS
 AX_CHECK_GIRS_GJS([Gio], [2.0])
