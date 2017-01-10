@@ -54,12 +54,6 @@ const KnowledgeSearchIface = '\
 </node>';
 const KnowledgeSearchIfaceInfo = Gio.DBusInterfaceInfo.new_for_xml(KnowledgeSearchIface);
 
-// https://www.freedesktop.org/software/systemd/man/sd_bus_path_encode.html
-function systemd_bus_path_decode(string) {
-    return string.replace(/_([a-zA-Z0-9]{2})/g, function(m, a) {
-        return String.fromCharCode(parseInt(a, 16));
-    });
-}
 
 function object_path_from_app_id (app_id) {
     return '/' + app_id.replace(/\./g, '/');
@@ -218,33 +212,5 @@ const AppSearchProvider = Lang.Class({
         let query = terms.join(' ');
         this._ensure_app_proxy();
         this._app_proxy.LoadQueryRemote(query, timestamp);
-    },
-});
-
-const GlobalSearchProvider = new Lang.Class({
-    Name: 'EksGlobalSearchProvider',
-
-    _init: function() {
-        this._dispatcher = new Eknc.SubtreeDispatcher({ interface_info: SearchIfaceInfo });
-        this._dispatcher.connect('dispatch-subtree', Lang.bind(this, this._dispatchSubtree));
-        this._appSearchProviders = {};
-    },
-
-    register: function(connection, path) {
-        this._dispatcher.register(connection, path);
-    },
-
-    unregister: function(connection) {
-        this._dispatcher.unregister();
-    },
-
-    _dispatchSubtree: function(dispatcher, subnode) {
-        if (this._appSearchProviders[subnode])
-            return this._appSearchProviders[subnode].skeleton;
-
-        let app_id = systemd_bus_path_decode(subnode);
-        let provider = new AppSearchProvider({ application_id: app_id });
-        this._appSearchProviders[subnode] = provider;
-        return provider.skeleton;
     },
 });
