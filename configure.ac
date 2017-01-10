@@ -31,16 +31,22 @@ AC_CACHE_SAVE
 AC_PROG_MKDIR_P
 # Needed for paths substitutions
 AC_PROG_SED
+# C compiler
+AC_PROG_CC
+AC_PROG_CC_C99
 # Library configuration tool
 PKG_PROG_PKG_CONFIG
-# Needed to compile GResources
-AC_SUBST([GLIB_COMPILE_RESOURCES], [`$PKG_CONFIG --variable glib_compile_resources gio-2.0`])
+# Needed for implementing dbus interfaces in C
+AC_SUBST([GDBUS_CODEGEN], [`$PKG_CONFIG --variable gdbus_codegen gio-2.0`])
 
 # We need the eos-knowledge-content library
-PKG_CHECK_MODULES([KNOWLEDGE_CONTENT], [eos-knowledge-content-0])
-
-AX_PROG_GJS
-AX_CHECK_GIRS_GJS([Gio], [2.0])
+PKG_CHECK_MODULES([SEARCH_PROVIDER], [
+    eos-knowledge-content-0
+    gio-2.0
+    glib-2.0
+    gobject-2.0
+    libsystemd
+])
 
 AC_CACHE_SAVE
 
