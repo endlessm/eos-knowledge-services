@@ -4,8 +4,8 @@
 
 #include "eks-search-provider.h"
 #include "eks-search-provider-dbus.h"
+#include "eks-subtree-dispatcher.h"
 
-#include <eos-knowledge-content.h>
 #include <systemd/sd-bus.h>
 
 /**
@@ -22,7 +22,7 @@ struct _EksSearchApp
 {
   GApplication parent_instance;
 
-  EkncSubtreeDispatcher *dispatcher;
+  EksSubtreeDispatcher *dispatcher;
   // Hash table with app id string keys, EksSearchProvider values
   GHashTable *app_search_providers;
 };
@@ -50,7 +50,7 @@ eks_search_app_register (GApplication *application,
 {
   EksSearchApp *self = EKS_SEARCH_APP (application);
 
-  eknc_subtree_dispatcher_register (self->dispatcher, connection, object_path);
+  eks_subtree_dispatcher_register (self->dispatcher, connection, object_path);
   return TRUE;
 }
 
@@ -61,7 +61,7 @@ eks_search_app_unregister (GApplication *application,
 {
   EksSearchApp *self = EKS_SEARCH_APP (application);
 
-  eknc_subtree_dispatcher_unregister (self->dispatcher);
+  eks_subtree_dispatcher_unregister (self->dispatcher);
 }
 
 static void
@@ -77,7 +77,7 @@ eks_search_app_class_init (EksSearchAppClass *klass)
 }
 
 static GDBusInterfaceSkeleton *
-dispatch_subtree (EkncSubtreeDispatcher *dispatcher,
+dispatch_subtree (EksSubtreeDispatcher *dispatcher,
                   const gchar *subnode,
                   EksSearchApp *self)
 {
@@ -101,7 +101,7 @@ dispatch_subtree (EkncSubtreeDispatcher *dispatcher,
 static void
 eks_search_app_init (EksSearchApp *self)
 {
-  self->dispatcher = g_object_new (EKNC_TYPE_SUBTREE_DISPATCHER,
+  self->dispatcher = g_object_new (EKS_TYPE_SUBTREE_DISPATCHER,
                                    "interface-info", eks_search_provider2_interface_info (),
                                    NULL);
   self->app_search_providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);

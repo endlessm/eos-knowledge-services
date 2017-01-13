@@ -69,6 +69,8 @@ eks_search_provider_v1_SOURCES = \
 	search-provider/eks-search-provider-dbus.h \
 	search-provider/eks-search-provider.c \
 	search-provider/eks-search-provider.h \
+	search-provider/eks-subtree-dispatcher.c \
+	search-provider/eks-subtree-dispatcher.h \
 	$(NULL)
 eks_search_provider_v1_CFLAGS = \
 	@SEARCH_PROVIDER_CFLAGS@ \
