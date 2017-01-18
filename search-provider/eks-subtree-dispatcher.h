@@ -26,9 +26,10 @@ struct _EksSubtreeDispatcherClass
   GObjectClass parent_class;
 };
 
-void eks_subtree_dispatcher_register (EksSubtreeDispatcher *self,
-                                      GDBusConnection        *connection,
-                                      const char             *subtree_path);
+gboolean eks_subtree_dispatcher_register (EksSubtreeDispatcher *self,
+                                          GDBusConnection *connection,
+                                          const char *subtree_path,
+                                          GError **error);
 
 void eks_subtree_dispatcher_unregister (EksSubtreeDispatcher *self);
 

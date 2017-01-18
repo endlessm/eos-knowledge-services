@@ -50,7 +50,7 @@ eks_search_app_register (GApplication *application,
 {
   EksSearchApp *self = EKS_SEARCH_APP (application);
 
-  eks_subtree_dispatcher_register (self->dispatcher, connection, object_path);
+  eks_subtree_dispatcher_register (self->dispatcher, connection, object_path, error);
   return TRUE;
 }
 

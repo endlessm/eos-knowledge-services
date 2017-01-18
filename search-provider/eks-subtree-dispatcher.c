@@ -205,32 +205,30 @@ const GDBusSubtreeVTable subtree_vtable = {
  * @self: the subtree dispatcher
  * @connection: the dbus connection
  * @subtree_path: a subtree path to register with
+ * @error: a GError for error reporting
  *
  * Register the dispatcher.
  */
-void
-eks_subtree_dispatcher_register (EksSubtreeDispatcher *self,
-                                 GDBusConnection       *connection,
-                                 const char            *subtree_path)
+gboolean
+eks_subtree_dispatcher_register (EksSubtreeDispatcher  *self,
+                                 GDBusConnection *connection,
+                                 const char *subtree_path,
+                                 GError **error)
 {
   EksSubtreeDispatcherPrivate *priv = eks_subtree_dispatcher_get_instance_private (self);
 
   if (priv->registration_id == 0)
     {
-      GError *error = NULL;
-
       priv->registration_id = g_dbus_connection_register_subtree (connection, subtree_path, &subtree_vtable,
                                                                   G_DBUS_SUBTREE_FLAGS_DISPATCH_TO_UNENUMERATED_NODES,
-                                                                  self, NULL, &error);
-      if (error != NULL)
-        {
-          g_warning ("Eks failed to register subtree: %s\n", error->message);
-          g_error_free (error);
-          return;
-        }
+                                                                  self, NULL, error);
+      if (!priv->registration_id)
+          return FALSE;
 
       priv->connection = g_object_ref (connection);
     }
+
+    return TRUE;
 }
 
 /**
