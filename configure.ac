@@ -45,7 +45,6 @@ PKG_CHECK_MODULES([SEARCH_PROVIDER], [
     gio-2.0
     glib-2.0
     gobject-2.0
-    libsystemd
 ])
 
 AC_CACHE_SAVE
