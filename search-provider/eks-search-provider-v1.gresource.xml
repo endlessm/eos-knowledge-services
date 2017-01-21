@@ -1,6 +1,0 @@
-<gresources>
-  <gresource prefix="/com/endlessm/knowledge-services/search-provider-v1">
-    <file>applicationV1.js</file>
-    <file>searchProviderV1.js</file>
-  </gresource>
-</gresources>
