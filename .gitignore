@@ -1,7 +1,4 @@
 # Autotools droppings
-.deps
-.libs
-.dirstamp
 Makefile
 Makefile.in
 /aclocal.m4
@@ -22,12 +19,10 @@ Makefile.in
 /missing
 
 # Build droppings
-*.o
 /com.endlessm.EknServices.json
-/eks-search-provider-v1
 /search-provider/com.endlessm.EknServices.SearchProviderV1.service
-/search-provider/eks-knowledge-app-dbus.[ch]
-/search-provider/eks-search-provider-dbus.[ch]
+/search-provider/eks-search-provider-v1
+/search-provider/eks-search-provider-v1.gresource
 
 # Test builds droppings
 /build
