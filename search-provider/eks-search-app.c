@@ -2,8 +2,8 @@
 
 #include "eks-search-app.h"
 
-#include "eks-grand-central-provider-dbus.h"
-#include "eks-grand-central-provider.h"
+#include "eks-discovery-feed-provider-dbus.h"
+#include "eks-discovery-feed-provider.h"
 #include "eks-search-provider.h"
 #include "eks-search-provider-dbus.h"
 #include "eks-subtree-dispatcher.h"
@@ -27,8 +27,8 @@ struct _EksSearchApp
   EksSubtreeDispatcher *dispatcher;
   // Hash table with app id string keys, EksSearchProvider values
   GHashTable *app_search_providers;
-  // Hash table with app id string keys, EksGrandCentralContentProvider values
-  GHashTable *grand_central_content_providers;
+  // Hash table with app id string keys, EksDiscoveryFeedContentProvider values
+  GHashTable *discovery_feed_content_providers;
 };
 
 G_DEFINE_TYPE (EksSearchApp,
@@ -42,7 +42,7 @@ eks_search_app_finalize (GObject *object)
 
   g_clear_object (&self->dispatcher);
   g_clear_pointer (&self->app_search_providers, g_hash_table_unref);
-  g_clear_pointer (&self->grand_central_content_providers, g_hash_table_unref);
+  g_clear_pointer (&self->discovery_feed_content_providers, g_hash_table_unref);
 
   G_OBJECT_CLASS (eks_search_app_parent_class)->finalize (object);
 }
@@ -157,10 +157,10 @@ subtree_object_info_for_interface (EksSearchApp      *self,
       info->create_type = EKS_TYPE_SEARCH_PROVIDER;
       info->cache = self->app_search_providers;
     }
-  else if (g_strcmp0 (interface, "com.endlessm.GrandCentralContent") == 0)
+  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedContent") == 0)
     {
-      info->create_type = EKS_TYPE_GRAND_CENTRAL_DATABASE_CONTENT_PROVIDER;
-      info->cache = self->grand_central_content_providers;
+      info->create_type = EKS_TYPE_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER;
+      info->cache = self->discovery_feed_content_providers;
     }
   else
     g_assert_not_reached();
@@ -195,7 +195,7 @@ eks_search_app_node_interface_infos ()
 {
   GPtrArray *ptr_array = g_ptr_array_new_full (2, (GDestroyNotify) g_dbus_interface_info_unref);
   g_ptr_array_add (ptr_array, eks_search_provider2_interface_info ());
-  g_ptr_array_add (ptr_array, eks_grand_central_content_interface_info ());
+  g_ptr_array_add (ptr_array, eks_discovery_feed_content_interface_info ());
   return ptr_array;
 }
 
@@ -206,7 +206,7 @@ eks_search_app_init (EksSearchApp *self)
                                    "interface-infos", eks_search_app_node_interface_infos (),
                                    NULL);
   self->app_search_providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
-  self->grand_central_content_providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+  self->discovery_feed_content_providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
   g_signal_connect (self->dispatcher, "dispatch-subtree",
                     G_CALLBACK (dispatch_subtree), self);
 }

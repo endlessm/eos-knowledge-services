@@ -39,12 +39,12 @@ search-provider/eks-search-provider-dbus.h search-provider/eks-search-provider-d
 	--generate-c-code search-provider/eks-search-provider-dbus \
 	$<
 
-search-provider/eks-grand-central-provider-dbus.h search-provider/eks-grand-central-provider-dbus.c: search-provider/eks-grand-central-provider-dbus.xml Makefile.am
+search-provider/eks-discovery-feed-provider-dbus.h search-provider/eks-discovery-feed-provider-dbus.c: search-provider/eks-discovery-feed-provider-dbus.xml Makefile.am
 	$(AM_V_GEN) $(MKDIR_P) $(@D) && \
 	$(GDBUS_CODEGEN) \
 	--interface-prefix=com.endlessm. \
 	--c-namespace Eks \
-	--generate-c-code search-provider/eks-grand-central-provider-dbus \
+	--generate-c-code search-provider/eks-discovery-feed-provider-dbus \
 	$<
 
 search-provider/eks-knowledge-app-dbus.h search-provider/eks-knowledge-app-dbus.c: search-provider/eks-knowledge-app-dbus.xml Makefile.am
@@ -57,15 +57,15 @@ search-provider/eks-knowledge-app-dbus.h search-provider/eks-knowledge-app-dbus.
 
 EXTRA_DIST += \
 	search-provider/eks-search-provider-dbus.xml \
-	search-provider/eks-grand-central-provider-dbus.xml \
+	search-provider/eks-discovery-feed-provider-dbus.xml \
 	search-provider/eks-knowledge-app-dbus.xml \
 	$(NULL)
 
 BUILT_SOURCES = \
 	search-provider/eks-search-provider-dbus.h \
 	search-provider/eks-search-provider-dbus.c \
-	search-provider/eks-grand-central-provider-dbus.h \
-	search-provider/eks-grand-central-provider-dbus.c \
+	search-provider/eks-discovery-feed-provider-dbus.h \
+	search-provider/eks-discovery-feed-provider-dbus.c \
 	search-provider/eks-knowledge-app-dbus.h \
 	search-provider/eks-knowledge-app-dbus.c \
 	$(NULL)
@@ -78,12 +78,12 @@ eks_search_provider_v1_SOURCES = \
 	search-provider/eks-search-main.c \
 	search-provider/eks-search-provider-dbus.c \
 	search-provider/eks-search-provider-dbus.h \
-	search-provider/eks-grand-central-provider-dbus.c \
-	search-provider/eks-grand-central-provider-dbus.h \
+	search-provider/eks-discovery-feed-provider-dbus.c \
+	search-provider/eks-discovery-feed-provider-dbus.h \
 	search-provider/eks-search-provider.c \
 	search-provider/eks-search-provider.h \
-	search-provider/eks-grand-central-provider.c \
-	search-provider/eks-grand-central-provider.h \
+	search-provider/eks-discovery-feed-provider.c \
+	search-provider/eks-discovery-feed-provider.h \
 	search-provider/eks-subtree-dispatcher.c \
 	search-provider/eks-subtree-dispatcher.h \
 	$(NULL)
