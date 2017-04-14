@@ -7,6 +7,8 @@
 
 #include <eos-knowledge-content.h>
 #include <eos-shard/eos-shard-shard-file.h>
+
+#include <stdlib.h>
 #include <string.h>
 
 struct _EksDiscoveryFeedDatabaseContentProvider
@@ -181,18 +183,79 @@ underscorify (const gchar *string)
 }
 
 static void
+add_key_value_pair_to_variant (GVariantBuilder *builder,
+                               const char      *key,
+                               const char      *value)
+{
+  g_variant_builder_open (builder, G_VARIANT_TYPE ("{ss}"));
+  g_variant_builder_add (builder, "s", key);
+  g_variant_builder_add (builder, "s", value);
+  g_variant_builder_close (builder);
+}
+
+static void
 add_key_value_pair_from_model_to_variant (EkncContentObjectModel *model,
                                           GVariantBuilder        *builder,
                                           const char             *key)
 {
-  g_variant_builder_open (builder, G_VARIANT_TYPE ("{ss}"));
   g_autofree gchar *value = NULL;
   g_autofree gchar *underscore_key = underscorify (key);
   g_object_get (model, key, &value, NULL);
-  g_variant_builder_add (builder, "s", underscore_key);
-  g_variant_builder_add (builder, "s", value);
-  g_variant_builder_close (builder);
+  add_key_value_pair_to_variant (builder, underscore_key, value);
 }
+
+static GPtrArray *
+variant_array_string_to_ptr_array (GVariant *variant,
+                                   unsigned int reserved_size)
+{
+  GVariantIter iter;
+  gchar *value;
+
+  GPtrArray *array = g_ptr_array_new_full (reserved_size, g_free);
+
+  g_variant_iter_init (&iter, variant);
+  while (g_variant_iter_next (&iter, "s", &value))
+    {
+      g_ptr_array_add (array, value);
+      /* No need to free value here, it is transferred to
+       * array */
+    }
+
+  return array;
+}
+
+static GPtrArray *
+variant_array_variant_to_ptr_array (GVariant *variant,
+                                    unsigned int reserved_size)
+{
+  GVariantIter iter;
+  GVariant *value;
+
+  GPtrArray *array = g_ptr_array_new_full (reserved_size, g_free);
+
+  g_variant_iter_init (&iter, variant);
+  while (g_variant_iter_loop (&iter, "v", &value))
+    {
+      g_ptr_array_add (array, g_strdup(g_variant_get_string(value, NULL)));
+      /* No need to free value here, it is transferred to
+       * array */
+    }
+
+  return array;
+}
+
+static const unsigned int ESTIMATED_BLURBS = 8;
+
+static const gchar *
+select_random_string_from_ptr_array(GPtrArray *array)
+{
+  if (array->len)
+    return g_ptr_array_index(array, rand () % array->len);
+
+  return NULL;
+}
+
+static const unsigned int DISCOVERY_FEED_SET_CUSTOM_TITLE = 1 << 0;
 
 static void
 article_card_descriptions_cb (GObject *source,
@@ -244,10 +307,46 @@ article_card_descriptions_cb (GObject *source,
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
       EkncContentObjectModel *model = l->data;
+      guint flags = 0;
 
-      /* Add key-value pair for title */
-      add_key_value_pair_from_model_to_variant (model, &builder, "title");
-      add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
+      /* Examine the discovery-feed-content object first and set flags
+       * for things that we've overridden */
+      g_autoptr(GVariant) discoveryFeedContentVariant;
+      g_object_get (model,
+                    "discovery-feed-content",
+                    &discoveryFeedContentVariant,
+                    NULL);
+      GVariantIter discoveryFeedContentIter;
+      g_variant_iter_init (&discoveryFeedContentIter,
+                           discoveryFeedContentVariant);
+
+      gchar *key;
+      GVariant *value;
+
+      while (g_variant_iter_loop (&discoveryFeedContentIter, "{sv}", &key, &value))
+        {
+          if (g_strcmp0(key, "blurbs") == 0)
+            {
+              g_autoptr(GPtrArray) array = variant_array_variant_to_ptr_array(value,
+                                                                              ESTIMATED_BLURBS);
+              const gchar *title = select_random_string_from_ptr_array(array);
+
+              if (title)
+                {
+                  add_key_value_pair_to_variant(&builder, "title", title);
+                  add_key_value_pair_to_variant(&builder, "synopsis", "");
+                  flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
+                }
+            }
+        }
+
+      /* Add key-value pairs based on things we haven't addded yet */
+      if (!(flags & DISCOVERY_FEED_SET_CUSTOM_TITLE))
+        {
+          add_key_value_pair_from_model_to_variant (model, &builder, "title");
+          add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
+        }
+
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
