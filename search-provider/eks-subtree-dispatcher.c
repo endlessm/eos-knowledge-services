@@ -16,13 +16,13 @@ struct _EksSubtreeDispatcherPrivate
   GDBusConnection *connection;
   guint registration_id;
 
-  GDBusInterfaceInfo *interface_info;
+  GPtrArray *interface_infos;
 };
 typedef struct _EksSubtreeDispatcherPrivate EksSubtreeDispatcherPrivate;
 
 enum {
   PROP_0,
-  PROP_INTERFACE_INFO,
+  PROP_INTERFACE_INFOS,
   NUM_PROPS,
 };
 static GParamSpec *obj_props[NUM_PROPS];
@@ -46,8 +46,9 @@ eks_subtree_dispatcher_get_property (GObject    *object,
 
   switch (prop_id)
     {
-    case PROP_INTERFACE_INFO:
-      g_value_set_boxed (value, priv->interface_info);
+    case PROP_INTERFACE_INFOS:
+      g_clear_pointer (&priv->interface_infos, g_ptr_array_unref);
+      g_value_set_boxed (value, priv->interface_infos);
       break;
 
     default:
@@ -66,8 +67,8 @@ eks_subtree_dispatcher_set_property (GObject      *object,
 
   switch (prop_id)
     {
-    case PROP_INTERFACE_INFO:
-      priv->interface_info = g_value_dup_boxed (value);
+    case PROP_INTERFACE_INFOS:
+      priv->interface_infos = g_value_dup_boxed (value);
       break;
 
     default:
@@ -83,7 +84,7 @@ eks_subtree_dispatcher_dispose (GObject *object)
 
   G_OBJECT_CLASS (eks_subtree_dispatcher_parent_class)->dispose (object);
 
-  g_clear_pointer (&priv->interface_info, g_dbus_interface_info_unref);
+  g_clear_pointer (&priv->interface_infos, g_ptr_array_unref);
 
   if (priv->registration_id > 0)
     {
@@ -102,16 +103,16 @@ eks_subtree_dispatcher_class_init (EksSubtreeDispatcherClass *klass)
   object_class->set_property = eks_subtree_dispatcher_set_property;
 
   /**
-   * EksSubtreeDispatcher:interface-info:
+   * EksSubtreeDispatcher:interface-infos:
    *
-   * A #GDBusInterfaceInfo containing the interface of all the children
+   * A #GDBusInterfaceInfo containing the interfaces of all the children
    * subobjects of this tree.
    */
-  obj_props[PROP_INTERFACE_INFO] = g_param_spec_boxed ("interface-info",
-                                                       "Interface Info",
-                                                       "The interface info of the children subobjects",
-                                                       G_TYPE_DBUS_INTERFACE_INFO,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_INTERFACE_INFOS] = g_param_spec_boxed ("interface-infos",
+                                                        "Interface Infos",
+                                                        "The interface infos of the children subobjects",
+                                                        G_TYPE_PTR_ARRAY,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
   g_object_class_install_properties (object_class, NUM_PROPS, obj_props);
 
   /**
@@ -130,7 +131,7 @@ eks_subtree_dispatcher_class_init (EksSubtreeDispatcherClass *klass)
                                             0,
                                             g_signal_accumulator_first_wins, NULL, NULL,
                                             G_TYPE_DBUS_INTERFACE_SKELETON,
-                                            1, G_TYPE_STRING);
+                                            2, G_TYPE_STRING, G_TYPE_STRING);
 }
 
 static void
@@ -164,7 +165,14 @@ subtree_introspect (GDBusConnection *connection,
     return NULL;
 
   GPtrArray *ptr_array = g_ptr_array_new ();
-  g_ptr_array_add (ptr_array, g_dbus_interface_info_ref (priv->interface_info));
+  size_t i = 0;
+
+  for (; i < priv->interface_infos->len; ++i) {
+    g_ptr_array_add (ptr_array,
+                     g_dbus_interface_info_ref (g_ptr_array_index(priv->interface_infos,
+                                                                  i)));
+  }
+
   g_ptr_array_add (ptr_array, NULL);
   return (GDBusInterfaceInfo **) g_ptr_array_free (ptr_array, FALSE);
 }
@@ -181,7 +189,7 @@ subtree_dispatch (GDBusConnection *connection,
   EksSubtreeDispatcher *self = EKS_SUBTREE_DISPATCHER (user_data);
   GDBusInterfaceSkeleton *skeleton;
 
-  g_signal_emit (self, signals[DISPATCH_SUBTREE], 0, node, &skeleton);
+  g_signal_emit (self, signals[DISPATCH_SUBTREE], 0, node, interface_name, &skeleton);
 
   if (!G_IS_DBUS_INTERFACE_SKELETON (skeleton))
     {
