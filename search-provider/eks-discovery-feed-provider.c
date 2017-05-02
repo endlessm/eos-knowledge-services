@@ -203,35 +203,16 @@ add_key_value_pair_from_model_to_variant (EkncContentObjectModel *model,
   add_key_value_pair_to_variant (builder, underscore_key, value);
 }
 
-static GPtrArray *
-variant_array_variant_to_ptr_array (GVariant *variant,
-                                    unsigned int reserved_size)
+static gchar *
+select_random_string_from_variant (GVariant *variant)
 {
-  GVariantIter iter;
-  GVariant *value;
+  gsize size = g_variant_n_children (variant);
+  gint index = g_random_int_range (0, size);
+  /* We need to unwrap the variant and then the inner string first */
+  g_autoptr(GVariant) child_variant = g_variant_get_child_value (variant, index);
+  g_autoptr(GVariant) child_value = g_variant_get_variant (child_variant);
 
-  GPtrArray *array = g_ptr_array_new_full (reserved_size, g_free);
-
-  g_variant_iter_init (&iter, variant);
-  while (g_variant_iter_loop (&iter, "v", &value))
-    {
-      g_ptr_array_add (array, g_strdup(g_variant_get_string(value, NULL)));
-      /* No need to free value here, it is transferred to
-       * array */
-    }
-
-  return array;
-}
-
-static const unsigned int ESTIMATED_BLURBS = 8;
-
-static const gchar *
-select_random_string_from_ptr_array(GPtrArray *array)
-{
-  if (array->len)
-    return g_ptr_array_index(array, g_random_int_range (0, array->len));
-
-  return NULL;
+  return g_variant_dup_string (child_value, NULL);
 }
 
 static const unsigned int DISCOVERY_FEED_SET_CUSTOM_TITLE = 1 << 0;
@@ -306,9 +287,7 @@ article_card_descriptions_cb (GObject *source,
         {
           if (g_strcmp0(key, "blurbs") == 0)
             {
-              g_autoptr(GPtrArray) array = variant_array_variant_to_ptr_array(value,
-                                                                              ESTIMATED_BLURBS);
-              const gchar *title = select_random_string_from_ptr_array(array);
+              g_autofree gchar *title = select_random_string_from_variant (value);
 
               if (title)
                 {
