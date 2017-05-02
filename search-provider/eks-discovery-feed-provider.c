@@ -204,26 +204,6 @@ add_key_value_pair_from_model_to_variant (EkncContentObjectModel *model,
 }
 
 static GPtrArray *
-variant_array_string_to_ptr_array (GVariant *variant,
-                                   unsigned int reserved_size)
-{
-  GVariantIter iter;
-  gchar *value;
-
-  GPtrArray *array = g_ptr_array_new_full (reserved_size, g_free);
-
-  g_variant_iter_init (&iter, variant);
-  while (g_variant_iter_next (&iter, "s", &value))
-    {
-      g_ptr_array_add (array, value);
-      /* No need to free value here, it is transferred to
-       * array */
-    }
-
-  return array;
-}
-
-static GPtrArray *
 variant_array_variant_to_ptr_array (GVariant *variant,
                                     unsigned int reserved_size)
 {
