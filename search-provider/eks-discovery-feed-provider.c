@@ -294,8 +294,8 @@ article_card_descriptions_cb (GObject *source,
 
               if (title)
                 {
-                  add_key_value_pair_to_variant(&builder, "title", title);
-                  add_key_value_pair_to_variant(&builder, "synopsis", "");
+                  add_key_value_pair_to_variant (&builder, "title", title);
+                  add_key_value_pair_to_variant (&builder, "synopsis", "");
                   flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
                 }
             }
