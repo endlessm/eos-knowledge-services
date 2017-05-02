@@ -19,6 +19,7 @@
 <node name="/" xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
   <interface name="com.endlessm.DiscoveryFeedContent">
     <method name="ArticleCardDescriptions">
+      <arg type="as" name="Shards" direction="out" />
       <arg type="aa{ss}" name="Results" direction="out" />
     </method>
   </interface>

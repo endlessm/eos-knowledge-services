@@ -6,6 +6,7 @@
 #include "eks-discovery-feed-provider-dbus.h"
 
 #include <eos-knowledge-content.h>
+#include <eos-shard/eos-shard-shard-file.h>
 #include <string.h>
 
 struct _EksDiscoveryFeedDatabaseContentProvider
@@ -204,6 +205,27 @@ article_card_descriptions_cb (GObject *source,
   g_application_release (g_application_get_default ());
 
   GError *error = NULL;
+  EkncDomain *domain = eknc_engine_get_domain_for_app (engine, state->provider->application_id, &error);
+  if (domain == NULL)
+    {
+      g_dbus_method_invocation_take_error (state->invocation, error);
+      discovery_feed_query_state_free (state);
+      return;
+    }
+
+  GSList *shards = eknc_domain_get_shards (domain);
+
+  GVariantBuilder shard_builder;
+  g_variant_builder_init (&shard_builder, G_VARIANT_TYPE_STRING_ARRAY);
+  for (GSList *l = shards; l; l = l->next)
+    {
+      g_autofree gchar *shard_path = NULL;
+      EosShardShardFile *shard = l->data;
+
+      g_object_get (shard, "path", &shard_path, NULL);
+      g_variant_builder_add (&shard_builder, "s", shard_path);
+    }
+
   g_autoptr(EkncQueryResults) results = NULL;
   if (!(results = eknc_engine_query_finish (engine, result, &error)))
     {
@@ -234,7 +256,7 @@ article_card_descriptions_cb (GObject *source,
       g_variant_builder_close (&builder);
     }
   g_dbus_method_invocation_return_value (state->invocation,
-                                         g_variant_new ("(aa{ss})", &builder));
+                                         g_variant_new ("(asaa{ss})", &shard_builder, &builder));
   discovery_feed_query_state_free (state);
 }
 
