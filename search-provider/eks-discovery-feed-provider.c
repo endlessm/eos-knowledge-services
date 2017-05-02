@@ -274,19 +274,19 @@ article_card_descriptions_cb (GObject *source,
 
       /* Examine the discovery-feed-content object first and set flags
        * for things that we've overridden */
-      g_autoptr(GVariant) discoveryFeedContentVariant;
+      g_autoptr(GVariant) discovery_feed_content_variant;
       g_object_get (model,
                     "discovery-feed-content",
-                    &discoveryFeedContentVariant,
+                    &discovery_feed_content_variant,
                     NULL);
-      GVariantIter discoveryFeedContentIter;
-      g_variant_iter_init (&discoveryFeedContentIter,
-                           discoveryFeedContentVariant);
+      GVariantIter discovery_feed_content_iter;
+      g_variant_iter_init (&discovery_feed_content_iter,
+                           discovery_feed_content_variant);
 
       gchar *key;
       GVariant *value;
 
-      while (g_variant_iter_loop (&discoveryFeedContentIter, "{sv}", &key, &value))
+      while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
         {
           if (g_strcmp0(key, "blurbs") == 0)
             {
