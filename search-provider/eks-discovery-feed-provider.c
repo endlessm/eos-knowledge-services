@@ -8,7 +8,6 @@
 #include <eos-knowledge-content.h>
 #include <eos-shard/eos-shard-shard-file.h>
 
-#include <stdlib.h>
 #include <string.h>
 
 struct _EksDiscoveryFeedDatabaseContentProvider
@@ -250,7 +249,7 @@ static const gchar *
 select_random_string_from_ptr_array(GPtrArray *array)
 {
   if (array->len)
-    return g_ptr_array_index(array, rand () % array->len);
+    return g_ptr_array_index(array, g_random_int_range (0, array->len));
 
   return NULL;
 }
