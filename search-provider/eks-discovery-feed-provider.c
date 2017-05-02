@@ -215,7 +215,10 @@ select_random_string_from_variant (GVariant *variant)
   return g_variant_dup_string (child_value, NULL);
 }
 
-static const unsigned int DISCOVERY_FEED_SET_CUSTOM_TITLE = 1 << 0;
+typedef enum {
+  DISCOVERY_FEED_NO_CUSTOM_PROPS = 0,
+  DISCOVERY_FEED_SET_CUSTOM_TITLE = 1 << 0
+} DiscoveryFeedCustomProps;
 
 static void
 article_card_descriptions_cb (GObject *source,
@@ -267,7 +270,7 @@ article_card_descriptions_cb (GObject *source,
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
       EkncContentObjectModel *model = l->data;
-      guint flags = 0;
+      DiscoveryFeedCustomProps flags = 0;
 
       /* Examine the discovery-feed-content object first and set flags
        * for things that we've overridden */
