@@ -158,7 +158,8 @@ subtree_object_info_for_interface (EksSearchApp      *self,
       info->create_type = EKS_TYPE_SEARCH_PROVIDER;
       info->cache = self->app_search_providers;
     }
-  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedContent") == 0)
+  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedContent") == 0 ||
+           g_strcmp0 (interface, "com.endlessm.DiscoveryFeedNews") == 0)
     {
       info->create_type = EKS_TYPE_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER;
       info->cache = self->discovery_feed_content_providers;

@@ -16,8 +16,10 @@ struct _EksDiscoveryFeedDatabaseContentProvider
   GObject parent_instance;
 
   gchar *application_id;
-  EksDiscoveryFeedContent *skeleton;
-  EksDiscoveryFeedContent *app_proxy;
+  EksDiscoveryFeedContent *content_skeleton;
+  EksDiscoveryFeedContent *content_app_proxy;
+  EksDiscoveryFeedNews *news_skeleton;
+  EksDiscoveryFeedNews *news_app_proxy;
   GCancellable *cancellable;
 };
 
@@ -82,8 +84,10 @@ eks_discovery_feed_database_content_provider_finalize (GObject *object)
   EksDiscoveryFeedDatabaseContentProvider *self = EKS_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER (object);
 
   g_clear_pointer (&self->application_id, g_free);
-  g_clear_object (&self->skeleton);
-  g_clear_object (&self->app_proxy);
+  g_clear_object (&self->content_skeleton);
+  g_clear_object (&self->news_skeleton);
+  g_clear_object (&self->content_app_proxy);
+  g_clear_object (&self->news_app_proxy);
   g_clear_object (&self->cancellable);
 
   G_OBJECT_CLASS (eks_discovery_feed_database_content_provider_parent_class)->finalize (object);
@@ -116,20 +120,44 @@ object_path_from_app_id (const gchar *application_id)
 }
 
 static gboolean
-ensure_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
+ensure_content_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
 {
-  if (self->app_proxy != NULL)
+  if (self->content_app_proxy != NULL)
     return TRUE;
 
   g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
   GError *error = NULL;
-  self->app_proxy = eks_discovery_feed_content_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                                       G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
-                                                                       G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
-                                                                       self->application_id,
-                                                                       object_path,
-                                                                       NULL,
-                                                                       &error);
+  self->content_app_proxy = eks_discovery_feed_content_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                                               G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
+                                                                               G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+                                                                               self->application_id,
+                                                                               object_path,
+                                                                               NULL,
+                                                                               &error);
+  if (error != NULL)
+    {
+      g_warning ("Error initializing dbus proxy: %s\n", error->message);
+      g_clear_error (&error);
+      return FALSE;
+    }
+  return TRUE;
+}
+
+static gboolean
+ensure_news_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
+{
+  if (self->news_app_proxy != NULL)
+    return TRUE;
+
+  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
+  GError *error = NULL;
+  self->news_app_proxy = eks_discovery_feed_news_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
+                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+                                                                         self->application_id,
+                                                                         object_path,
+                                                                         NULL,
+                                                                         &error);
   if (error != NULL)
     {
       g_warning ("Error initializing dbus proxy: %s\n", error->message);
@@ -275,24 +303,28 @@ article_card_descriptions_cb (GObject *source,
                     "discovery-feed-content",
                     &discovery_feed_content_variant,
                     NULL);
-      GVariantIter discovery_feed_content_iter;
-      g_variant_iter_init (&discovery_feed_content_iter,
-                           discovery_feed_content_variant);
 
-      gchar *key;
-      GVariant *value;
-
-      while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
+      if (discovery_feed_content_variant)
         {
-          if (g_strcmp0 (key, "blurbs") == 0)
-            {
-              g_autofree gchar *title = select_random_string_from_variant (value);
+          GVariantIter discovery_feed_content_iter;
+          g_variant_iter_init (&discovery_feed_content_iter,
+                               discovery_feed_content_variant);
 
-              if (title)
+          gchar *key;
+          GVariant *value;
+
+          while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
+            {
+              if (g_strcmp0 (key, "blurbs") == 0)
                 {
-                  add_key_value_pair_to_variant (&builder, "title", title);
-                  add_key_value_pair_to_variant (&builder, "synopsis", "");
-                  flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
+                  g_autofree gchar *title = select_random_string_from_variant (value);
+
+                  if (title)
+                    {
+                      add_key_value_pair_to_variant (&builder, "title", title);
+                      add_key_value_pair_to_variant (&builder, "synopsis", "");
+                      flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
+                    }
                 }
             }
         }
@@ -323,7 +355,7 @@ handle_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
 {
     EksDiscoveryFeedDatabaseContentProvider *self = (EksDiscoveryFeedDatabaseContentProvider *) user_data;
 
-    if (!ensure_app_proxy (self))
+    if (!ensure_content_app_proxy (self))
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
@@ -360,13 +392,128 @@ handle_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
     return TRUE;
 }
 
+static void
+recent_news_articles_cb (GObject *source,
+                         GAsyncResult *result,
+                         gpointer user_data)
+{
+  EkncEngine *engine = EKNC_ENGINE (source);
+  DiscoveryFeedQueryState *state = user_data;
+
+  g_application_release (g_application_get_default ());
+
+  GError *error = NULL;
+  EkncDomain *domain = eknc_engine_get_domain_for_app (engine, state->provider->application_id, &error);
+  if (domain == NULL)
+    {
+      g_dbus_method_invocation_take_error (state->invocation, error);
+      discovery_feed_query_state_free (state);
+      return;
+    }
+
+  GSList *shards = eknc_domain_get_shards (domain);
+
+  GVariantBuilder shard_builder;
+  g_variant_builder_init (&shard_builder, G_VARIANT_TYPE_STRING_ARRAY);
+  for (GSList *l = shards; l; l = l->next)
+    {
+      g_autofree gchar *shard_path = NULL;
+      EosShardShardFile *shard = l->data;
+
+      g_object_get (shard, "path", &shard_path, NULL);
+      g_variant_builder_add (&shard_builder, "s", shard_path);
+    }
+
+  g_autoptr(EkncQueryResults) results = NULL;
+  if (!(results = eknc_engine_query_finish (engine, result, &error)))
+    {
+      g_dbus_method_invocation_return_gerror (state->invocation, error);
+      discovery_feed_query_state_free (state);
+      return;
+    }
+
+  GSList *models = eknc_query_results_get_models (results);
+
+  GVariantBuilder builder;
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
+  for (GSList *l = models; l; l = l->next)
+    {
+      /* Start building up object */
+      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
+
+      EkncContentObjectModel *model = l->data;
+
+      add_key_value_pair_from_model_to_variant (model, &builder, "title");
+      add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
+      add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
+      add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
+      add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
+
+      /* Stop building object */
+      g_variant_builder_close (&builder);
+    }
+  g_dbus_method_invocation_return_value (state->invocation,
+                                         g_variant_new ("(asaa{ss})", &shard_builder, &builder));
+  discovery_feed_query_state_free (state);
+}
+
+static gboolean
+handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
+                        GDBusMethodInvocation                  *invocation,
+                        gpointer                                user_data)
+{
+    EksDiscoveryFeedDatabaseContentProvider *self = (EksDiscoveryFeedDatabaseContentProvider *) user_data;
+
+    if (!ensure_news_app_proxy (self))
+      return TRUE;
+
+    EkncEngine *engine = eknc_engine_get_default ();
+
+    /* Build up tags_match_any */
+    GVariantBuilder tags_match_any_builder;
+    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
+    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
+    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+
+    /* Create query and run it */
+    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                     "tags-match-any", tags_match_any,
+                                                     "sort", EKNC_QUERY_OBJECT_SORT_DATE,
+                                                     "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
+                                                     "limit", 5,
+                                                     "app-id", self->application_id,
+                                                     NULL);
+
+    /* Hold the application so that it doesn't go away whilst we're handling
+     * the query */
+    g_application_hold (g_application_get_default ());
+
+    eknc_engine_query (engine,
+                       query,
+                       self->cancellable,
+                       recent_news_articles_cb,
+                       discovery_feed_query_state_new (invocation, self));
+
+    return TRUE;
+}
+
 static GDBusInterfaceSkeleton *
 eks_discovery_feed_database_content_provider_skeleton_for_interface (EksProvider *provider,
                                                                      const gchar *interface)
 {
   EksDiscoveryFeedDatabaseContentProvider *self = EKS_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER (provider);
 
-  return self->skeleton;
+  if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedContent") == 0)
+    {
+      return G_DBUS_INTERFACE_SKELETON(self->content_skeleton);
+    }
+  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedNews") == 0)
+    {
+      return G_DBUS_INTERFACE_SKELETON(self->news_skeleton);
+    }
+
+  g_assert_not_reached ();
+  return NULL;
 }
 
 static void
@@ -378,7 +525,11 @@ eks_discovery_feed_database_content_provider_interface_init (EksProviderInterfac
 static void
 eks_discovery_feed_database_content_provider_init (EksDiscoveryFeedDatabaseContentProvider *self)
 {
-  self->skeleton = eks_discovery_feed_content_skeleton_new ();
-  g_signal_connect (self->skeleton, "handle-article-card-descriptions",
+  self->content_skeleton = eks_discovery_feed_content_skeleton_new ();
+  g_signal_connect (self->content_skeleton, "handle-article-card-descriptions",
                     G_CALLBACK (handle_article_card_descriptions), self);
+
+  self->news_skeleton = eks_discovery_feed_news_skeleton_new ();
+  g_signal_connect (self->news_skeleton, "handle-get-recent-news",
+                    G_CALLBACK (handle_get_recent_news), self);
 }
