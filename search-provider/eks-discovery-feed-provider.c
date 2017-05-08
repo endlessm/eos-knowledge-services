@@ -7,6 +7,7 @@
 
 #include <eos-knowledge-content.h>
 #include <eos-shard/eos-shard-shard-file.h>
+
 #include <string.h>
 
 struct _EksDiscoveryFeedDatabaseContentProvider
@@ -181,18 +182,43 @@ underscorify (const gchar *string)
 }
 
 static void
+add_key_value_pair_to_variant (GVariantBuilder *builder,
+                               const char      *key,
+                               const char      *value)
+{
+  g_variant_builder_open (builder, G_VARIANT_TYPE ("{ss}"));
+  g_variant_builder_add (builder, "s", key);
+  g_variant_builder_add (builder, "s", value);
+  g_variant_builder_close (builder);
+}
+
+static void
 add_key_value_pair_from_model_to_variant (EkncContentObjectModel *model,
                                           GVariantBuilder        *builder,
                                           const char             *key)
 {
-  g_variant_builder_open (builder, G_VARIANT_TYPE ("{ss}"));
   g_autofree gchar *value = NULL;
   g_autofree gchar *underscore_key = underscorify (key);
   g_object_get (model, key, &value, NULL);
-  g_variant_builder_add (builder, "s", underscore_key);
-  g_variant_builder_add (builder, "s", value);
-  g_variant_builder_close (builder);
+  add_key_value_pair_to_variant (builder, underscore_key, value);
 }
+
+static gchar *
+select_random_string_from_variant (GVariant *variant)
+{
+  gsize size = g_variant_n_children (variant);
+  gint index = g_random_int_range (0, size);
+  /* We need to unwrap the variant and then the inner string first */
+  g_autoptr(GVariant) child_variant = g_variant_get_child_value (variant, index);
+  g_autoptr(GVariant) child_value = g_variant_get_variant (child_variant);
+
+  return g_variant_dup_string (child_value, NULL);
+}
+
+typedef enum {
+  DISCOVERY_FEED_NO_CUSTOM_PROPS = 0,
+  DISCOVERY_FEED_SET_CUSTOM_TITLE = 1 << 0
+} DiscoveryFeedCustomProps;
 
 static void
 article_card_descriptions_cb (GObject *source,
@@ -244,10 +270,44 @@ article_card_descriptions_cb (GObject *source,
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
       EkncContentObjectModel *model = l->data;
+      DiscoveryFeedCustomProps flags = 0;
 
-      /* Add key-value pair for title */
-      add_key_value_pair_from_model_to_variant (model, &builder, "title");
-      add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
+      /* Examine the discovery-feed-content object first and set flags
+       * for things that we've overridden */
+      g_autoptr(GVariant) discovery_feed_content_variant;
+      g_object_get (model,
+                    "discovery-feed-content",
+                    &discovery_feed_content_variant,
+                    NULL);
+      GVariantIter discovery_feed_content_iter;
+      g_variant_iter_init (&discovery_feed_content_iter,
+                           discovery_feed_content_variant);
+
+      gchar *key;
+      GVariant *value;
+
+      while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
+        {
+          if (g_strcmp0 (key, "blurbs") == 0)
+            {
+              g_autofree gchar *title = select_random_string_from_variant (value);
+
+              if (title)
+                {
+                  add_key_value_pair_to_variant (&builder, "title", title);
+                  add_key_value_pair_to_variant (&builder, "synopsis", "");
+                  flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
+                }
+            }
+        }
+
+      /* Add key-value pairs based on things we haven't addded yet */
+      if (!(flags & DISCOVERY_FEED_SET_CUSTOM_TITLE))
+        {
+          add_key_value_pair_from_model_to_variant (model, &builder, "title");
+          add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
+        }
+
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
@@ -278,9 +338,15 @@ handle_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
     GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
+    GVariantBuilder tags_match_all_builder;
+    g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
+    g_variant_builder_add (&tags_match_all_builder, "s", "EknHasDiscoveryFeedTitle");
+    GVariant *tags_match_all = g_variant_builder_end (&tags_match_all_builder);
+
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
+                                                     "tags-match-all", tags_match_all,
                                                      "limit", 5,
                                                      "app-id", self->application_id,
                                                      NULL);
