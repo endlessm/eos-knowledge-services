@@ -86,6 +86,8 @@ eks_search_provider_v1_SOURCES = \
 	search-provider/eks-discovery-feed-provider.h \
 	search-provider/eks-subtree-dispatcher.c \
 	search-provider/eks-subtree-dispatcher.h \
+	search-provider/eks-provider-iface.h \
+	search-provider/eks-provider-iface.c \
 	$(NULL)
 eks_search_provider_v1_CFLAGS = \
 	@SEARCH_PROVIDER_CFLAGS@ \

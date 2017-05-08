@@ -1,6 +1,7 @@
 /* Copyright 2016 Endless Mobile, Inc. */
 
 #include "eks-discovery-feed-provider.h"
+#include "eks-provider-iface.h"
 
 #include "eks-knowledge-app-dbus.h"
 #include "eks-discovery-feed-provider-dbus.h"
@@ -20,14 +21,17 @@ struct _EksDiscoveryFeedDatabaseContentProvider
   GCancellable *cancellable;
 };
 
-G_DEFINE_TYPE (EksDiscoveryFeedDatabaseContentProvider,
-               eks_discovery_feed_database_content_provider,
-               G_TYPE_OBJECT)
+static void eks_discovery_feed_database_content_provider_interface_init (EksProviderInterface *iface);
+
+G_DEFINE_TYPE_WITH_CODE (EksDiscoveryFeedDatabaseContentProvider,
+                         eks_discovery_feed_database_content_provider,
+                         G_TYPE_OBJECT,
+                         G_IMPLEMENT_INTERFACE (EKS_TYPE_PROVIDER,
+                                                eks_discovery_feed_database_content_provider_interface_init))
 
 enum {
   PROP_0,
   PROP_APPLICATION_ID,
-  PROP_SKELETON,
   NPROPS
 };
 
@@ -45,10 +49,6 @@ eks_discovery_feed_database_content_provider_get_property (GObject    *object,
     {
     case PROP_APPLICATION_ID:
       g_value_set_string (value, self->application_id);
-      break;
-
-    case PROP_SKELETON:
-      g_value_set_object (value, self->skeleton);
       break;
 
     default:
@@ -101,10 +101,6 @@ eks_discovery_feed_database_content_provider_class_init (EksDiscoveryFeedDatabas
   eks_discovery_feed_database_content_provider_props[PROP_APPLICATION_ID] =
     g_param_spec_string ("application-id", "Application Id", "Application Id",
       "", G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
-
-  eks_discovery_feed_database_content_provider_props[PROP_SKELETON] =
-    g_param_spec_object ("skeleton", "Skeleton", "Skeleton",
-      G_TYPE_DBUS_INTERFACE_SKELETON, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (object_class,
                                      NPROPS,
@@ -363,7 +359,22 @@ handle_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
 
     return TRUE;
 }
-                       
+
+static GDBusInterfaceSkeleton *
+eks_discovery_feed_database_content_provider_skeleton_for_interface (EksProvider *provider,
+                                                                     const gchar *interface)
+{
+  EksDiscoveryFeedDatabaseContentProvider *self = EKS_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER (provider);
+
+  return self->skeleton;
+}
+
+static void
+eks_discovery_feed_database_content_provider_interface_init (EksProviderInterface *iface)
+{
+  iface->skeleton_for_interface = eks_discovery_feed_database_content_provider_skeleton_for_interface;
+}
+
 static void
 eks_discovery_feed_database_content_provider_init (EksDiscoveryFeedDatabaseContentProvider *self)
 {

@@ -4,6 +4,7 @@
 
 #include "eks-discovery-feed-provider-dbus.h"
 #include "eks-discovery-feed-provider.h"
+#include "eks-provider-iface.h"
 #include "eks-search-provider.h"
 #include "eks-search-provider-dbus.h"
 #include "eks-subtree-dispatcher.h"
@@ -175,7 +176,7 @@ dispatch_subtree (EksSubtreeDispatcher *dispatcher,
   SubtreeObjectInfo info;
   subtree_object_info_for_interface (self, interface, &info);
 
-  GObject *provider = g_hash_table_lookup (info.cache, subnode);
+  EksProvider *provider = EKS_PROVIDER (g_hash_table_lookup (info.cache, subnode));
   if (provider == NULL)
     {
       g_autofree gchar *app_id = bus_label_unescape (subnode);
@@ -185,17 +186,16 @@ dispatch_subtree (EksSubtreeDispatcher *dispatcher,
       g_hash_table_insert (info.cache, g_strdup (subnode), provider);
     }
 
-  GDBusInterfaceSkeleton *skeleton;
-  g_object_get (provider, "skeleton", &skeleton, NULL);
-  return skeleton;
+  return eks_provider_skeleton_for_interface (provider, interface);
 }
 
 static GPtrArray *
 eks_search_app_node_interface_infos ()
 {
-  GPtrArray *ptr_array = g_ptr_array_new_full (2, (GDestroyNotify) g_dbus_interface_info_unref);
+  GPtrArray *ptr_array = g_ptr_array_new_full (3, (GDestroyNotify) g_dbus_interface_info_unref);
   g_ptr_array_add (ptr_array, eks_search_provider2_interface_info ());
   g_ptr_array_add (ptr_array, eks_discovery_feed_content_interface_info ());
+  g_ptr_array_add (ptr_array, eks_discovery_feed_news_interface_info ());
   return ptr_array;
 }
 
