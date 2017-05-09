@@ -193,7 +193,7 @@ dispatch_subtree (EksSubtreeDispatcher *dispatcher,
 static GPtrArray *
 eks_search_app_node_interface_infos ()
 {
-  GPtrArray *ptr_array = g_ptr_array_new_full (3, (GDestroyNotify) g_dbus_interface_info_unref);
+  GPtrArray *ptr_array = g_ptr_array_new_with_free_func ((GDestroyNotify) g_dbus_interface_info_unref);
   g_ptr_array_add (ptr_array, eks_search_provider2_interface_info ());
   g_ptr_array_add (ptr_array, eks_discovery_feed_content_interface_info ());
   g_ptr_array_add (ptr_array, eks_discovery_feed_news_interface_info ());
