@@ -294,7 +294,7 @@ article_card_descriptions_cb (GObject *source,
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
       EkncContentObjectModel *model = l->data;
-      DiscoveryFeedCustomProps flags = 0;
+      DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
 
       /* Examine the discovery-feed-content object first and set flags
        * for things that we've overridden */
