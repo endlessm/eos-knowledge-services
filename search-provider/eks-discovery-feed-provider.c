@@ -385,7 +385,7 @@ handle_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
                                   GDBusMethodInvocation                  *invocation,
                                   gpointer                                user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = (EksDiscoveryFeedDatabaseContentProvider *) user_data;
+    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
 
     if (!ensure_content_app_proxy (self))
       return TRUE;
@@ -481,7 +481,7 @@ handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                         GDBusMethodInvocation                  *invocation,
                         gpointer                                user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = (EksDiscoveryFeedDatabaseContentProvider *) user_data;
+    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
 
     if (!ensure_news_app_proxy (self))
       return TRUE;
