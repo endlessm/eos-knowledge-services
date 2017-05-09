@@ -244,6 +244,51 @@ typedef enum {
   DISCOVERY_FEED_SET_CUSTOM_TITLE = 1 << 0
 } DiscoveryFeedCustomProps;
 
+static gboolean
+models_and_shards_for_result (EkncEngine   *engine,
+                              const gchar  *application_id,
+                              GAsyncResult *result,
+                              GSList       **models,
+                              GSList       **shards,
+                              GError       **error)
+{
+  EkncDomain *domain = eknc_engine_get_domain_for_app (engine,
+                                                       application_id,
+                                                       error);
+  if (domain == NULL)
+    {
+      return FALSE;
+    }
+
+  g_autoptr(EkncQueryResults) results = NULL;
+  if (!(results = eknc_engine_query_finish (engine, result, error)))
+    {
+      return FALSE;
+    }
+
+  *shards = eknc_domain_get_shards (domain);
+  *models = g_slist_copy_deep (eknc_query_results_get_models (results),
+                               (GCopyFunc) g_object_ref,
+                               NULL);
+
+  return TRUE;
+}
+
+static void
+string_array_variant_from_shard_list (GVariantBuilder *string_array_builder,
+                                      GSList          *shards)
+{
+  g_variant_builder_init (string_array_builder, G_VARIANT_TYPE_STRING_ARRAY);
+  for (GSList *l = shards; l; l = l->next)
+    {
+      g_autofree gchar *shard_path = NULL;
+      EosShardShardFile *shard = l->data;
+
+      g_object_get (shard, "path", &shard_path, NULL);
+      g_variant_builder_add (string_array_builder, "s", shard_path);
+    }
+}
+
 static void
 article_card_descriptions_cb (GObject *source,
                               GAsyncResult *result,
@@ -255,36 +300,23 @@ article_card_descriptions_cb (GObject *source,
   g_application_release (g_application_get_default ());
 
   GError *error = NULL;
-  EkncDomain *domain = eknc_engine_get_domain_for_app (engine, state->provider->application_id, &error);
-  if (domain == NULL)
+  g_autoptr(GSList) models = NULL;
+  GSList *shards = NULL;
+
+  if (!models_and_shards_for_result (engine,
+                                     state->provider->application_id,
+                                     result,
+                                     &models,
+                                     &shards,
+                                     &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
       discovery_feed_query_state_free (state);
       return;
     }
 
-  GSList *shards = eknc_domain_get_shards (domain);
-
   GVariantBuilder shard_builder;
-  g_variant_builder_init (&shard_builder, G_VARIANT_TYPE_STRING_ARRAY);
-  for (GSList *l = shards; l; l = l->next)
-    {
-      g_autofree gchar *shard_path = NULL;
-      EosShardShardFile *shard = l->data;
-
-      g_object_get (shard, "path", &shard_path, NULL);
-      g_variant_builder_add (&shard_builder, "s", shard_path);
-    }
-
-  g_autoptr(EkncQueryResults) results = NULL;
-  if (!(results = eknc_engine_query_finish (engine, result, &error)))
-    {
-      g_dbus_method_invocation_return_gerror (state->invocation, error);
-      discovery_feed_query_state_free (state);
-      return;
-    }
-
-  GSList *models = eknc_query_results_get_models (results);
+  string_array_variant_from_shard_list (&shard_builder, shards);
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
@@ -403,36 +435,23 @@ recent_news_articles_cb (GObject *source,
   g_application_release (g_application_get_default ());
 
   GError *error = NULL;
-  EkncDomain *domain = eknc_engine_get_domain_for_app (engine, state->provider->application_id, &error);
-  if (domain == NULL)
+  g_autoptr(GSList) models = NULL;
+  GSList *shards = NULL;
+
+  if (!models_and_shards_for_result (engine,
+                                     state->provider->application_id,
+                                     result,
+                                     &models,
+                                     &shards,
+                                     &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
       discovery_feed_query_state_free (state);
       return;
     }
 
-  GSList *shards = eknc_domain_get_shards (domain);
-
   GVariantBuilder shard_builder;
-  g_variant_builder_init (&shard_builder, G_VARIANT_TYPE_STRING_ARRAY);
-  for (GSList *l = shards; l; l = l->next)
-    {
-      g_autofree gchar *shard_path = NULL;
-      EosShardShardFile *shard = l->data;
-
-      g_object_get (shard, "path", &shard_path, NULL);
-      g_variant_builder_add (&shard_builder, "s", shard_path);
-    }
-
-  g_autoptr(EkncQueryResults) results = NULL;
-  if (!(results = eknc_engine_query_finish (engine, result, &error)))
-    {
-      g_dbus_method_invocation_return_gerror (state->invocation, error);
-      discovery_feed_query_state_free (state);
-      return;
-    }
-
-  GSList *models = eknc_query_results_get_models (results);
+  string_array_variant_from_shard_list (&shard_builder, shards);
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
