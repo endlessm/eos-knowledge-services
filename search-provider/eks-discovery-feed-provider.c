@@ -531,9 +531,9 @@ eks_discovery_feed_database_content_provider_skeleton_for_interface (EksProvider
   EksDiscoveryFeedDatabaseContentProvider *self = EKS_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER (provider);
 
   if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedContent") == 0)
-      return G_DBUS_INTERFACE_SKELETON(self->content_skeleton);
+      return G_DBUS_INTERFACE_SKELETON (self->content_skeleton);
   else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedNews") == 0)
-      return G_DBUS_INTERFACE_SKELETON(self->news_skeleton);
+      return G_DBUS_INTERFACE_SKELETON (self->news_skeleton);
 
   g_assert_not_reached ();
   return NULL;
