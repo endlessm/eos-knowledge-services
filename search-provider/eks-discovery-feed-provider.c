@@ -302,7 +302,7 @@ article_card_descriptions_cb (GObject *source,
   g_application_release (g_application_get_default ());
 
   GError *error = NULL;
-  g_autoptr(GSList) models = NULL;
+  GSList *models = NULL;
   GSList *shards = NULL;
 
   if (!models_and_shards_for_result (engine,
@@ -314,6 +314,9 @@ article_card_descriptions_cb (GObject *source,
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
       discovery_feed_query_state_free (state);
+
+      /* No need to free_full the out models and shards here,
+       * g_slist_copy_deep is not called if this function returns FALSE. */
       return;
     }
 
@@ -379,6 +382,8 @@ article_card_descriptions_cb (GObject *source,
     }
   g_dbus_method_invocation_return_value (state->invocation,
                                          g_variant_new ("(asaa{ss})", &shard_builder, &builder));
+  g_slist_free_full (models, g_object_unref);
+  g_slist_free_full (shards, g_object_unref);
   discovery_feed_query_state_free (state);
 }
 
@@ -437,7 +442,7 @@ recent_news_articles_cb (GObject *source,
   g_application_release (g_application_get_default ());
 
   GError *error = NULL;
-  g_autoptr(GSList) models = NULL;
+  GSList *models = NULL;
   GSList *shards = NULL;
 
   if (!models_and_shards_for_result (engine,
@@ -449,6 +454,9 @@ recent_news_articles_cb (GObject *source,
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
       discovery_feed_query_state_free (state);
+
+      /* No need to free_full the out models and shards here,
+       * g_slist_copy_deep is not called if this function returns FALSE. */
       return;
     }
 
@@ -475,6 +483,8 @@ recent_news_articles_cb (GObject *source,
     }
   g_dbus_method_invocation_return_value (state->invocation,
                                          g_variant_new ("(asaa{ss})", &shard_builder, &builder));
+  g_slist_free_full (models, g_object_unref);
+  g_slist_free_full (shards, g_object_unref);
   discovery_feed_query_state_free (state);
 }
 
