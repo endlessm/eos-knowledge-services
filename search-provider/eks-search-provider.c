@@ -347,7 +347,7 @@ eks_search_provider_skeleton_for_interface (EksProvider *provider,
                                             const gchar *interface)
 {
   EksSearchProvider *self = EKS_SEARCH_PROVIDER (provider);
-  return (GDBusInterfaceSkeleton *) self->skeleton;
+  return G_DBUS_INTERFACE_SKELETON (self->skeleton);
 }
 
 static void
