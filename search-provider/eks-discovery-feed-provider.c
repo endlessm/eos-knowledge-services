@@ -256,15 +256,11 @@ models_and_shards_for_result (EkncEngine   *engine,
                                                        application_id,
                                                        error);
   if (domain == NULL)
-    {
       return FALSE;
-    }
 
   g_autoptr(EkncQueryResults) results = NULL;
   if (!(results = eknc_engine_query_finish (engine, result, error)))
-    {
       return FALSE;
-    }
 
   *shards = g_slist_copy_deep (eknc_domain_get_shards (domain),
                                (GCopyFunc) g_object_ref,
