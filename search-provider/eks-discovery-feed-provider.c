@@ -266,7 +266,9 @@ models_and_shards_for_result (EkncEngine   *engine,
       return FALSE;
     }
 
-  *shards = eknc_domain_get_shards (domain);
+  *shards = g_slist_copy_deep (eknc_domain_get_shards (domain),
+                               (GCopyFunc) g_object_ref,
+                               NULL);
   *models = g_slist_copy_deep (eknc_query_results_get_models (results),
                                (GCopyFunc) g_object_ref,
                                NULL);
