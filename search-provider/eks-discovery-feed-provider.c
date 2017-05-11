@@ -252,14 +252,14 @@ models_and_shards_for_result (EkncEngine   *engine,
                               GSList       **shards,
                               GError       **error)
 {
+  g_autoptr(EkncQueryResults) results = NULL;
+  if (!(results = eknc_engine_query_finish (engine, result, error)))
+      return FALSE;
+
   EkncDomain *domain = eknc_engine_get_domain_for_app (engine,
                                                        application_id,
                                                        error);
   if (domain == NULL)
-      return FALSE;
-
-  g_autoptr(EkncQueryResults) results = NULL;
-  if (!(results = eknc_engine_query_finish (engine, result, error)))
       return FALSE;
 
   *shards = g_slist_copy_deep (eknc_domain_get_shards (domain),
