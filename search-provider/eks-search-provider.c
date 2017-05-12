@@ -136,7 +136,7 @@ ensure_app_proxy (EksSearchProvider *self)
                                                                  &error);
   if (error != NULL)
     {
-      g_warning ("Error initializing dbus proxy: %s\n", error->message);
+      g_warning ("Error initializing dbus proxy: %s", error->message);
       g_clear_error (&error);
       return FALSE;
     }
@@ -311,7 +311,7 @@ handle_activate_result (EksSearchProvider2 *skeleton,
                                             &error);
   if (error != NULL)
     {
-      g_warning ("Error activating result: %s\n", error->message);
+      g_warning ("Error activating result: %s", error->message);
       g_clear_error (&error);
     }
   return TRUE;
@@ -336,7 +336,7 @@ handle_launch_search (EksSearchProvider2 *skeleton,
                                              &error);
   if (error != NULL)
     {
-      g_warning ("Error launching search: %s\n", error->message);
+      g_warning ("Error launching search: %s", error->message);
       g_clear_error (&error);
     }
   return TRUE;

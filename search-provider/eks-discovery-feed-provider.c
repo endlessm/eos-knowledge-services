@@ -136,7 +136,7 @@ ensure_content_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
                                                                                &error);
   if (error != NULL)
     {
-      g_warning ("Error initializing dbus proxy: %s\n", error->message);
+      g_warning ("Error initializing dbus proxy: %s", error->message);
       g_clear_error (&error);
       return FALSE;
     }
@@ -160,7 +160,7 @@ ensure_news_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
                                                                          &error);
   if (error != NULL)
     {
-      g_warning ("Error initializing dbus proxy: %s\n", error->message);
+      g_warning ("Error initializing dbus proxy: %s", error->message);
       g_clear_error (&error);
       return FALSE;
     }
