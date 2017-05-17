@@ -152,7 +152,8 @@ subtree_object_info_for_interface (EksSearchApp      *self,
                                    const gchar       *interface,
                                    SubtreeObjectInfo *info)
 {
-  if (g_strcmp0 (interface, "org.gnome.Shell.SearchProvider") == 0)
+  if (g_strcmp0 (interface, "org.gnome.Shell.SearchProvider") == 0 ||
+      g_strcmp0 (interface, "org.gnome.Shell.SearchProvider2") == 0)
     {
       info->create_type = EKS_TYPE_SEARCH_PROVIDER;
       info->cache = self->app_search_providers;
