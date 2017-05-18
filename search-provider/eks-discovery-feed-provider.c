@@ -227,11 +227,18 @@ add_key_value_pair_from_model_to_variant (EkncContentObjectModel *model,
   add_key_value_pair_to_variant (builder, underscore_key, value);
 }
 
+static gint
+get_day_of_week (void)
+{
+  g_autoptr(GDateTime) datetime = g_date_time_new_now_local ();
+  return g_date_time_get_day_of_week (datetime);
+}
+
 static gchar *
-select_random_string_from_variant (GVariant *variant)
+select_string_from_variant_from_day (GVariant *variant)
 {
   gsize size = g_variant_n_children (variant);
-  gint index = g_random_int_range (0, size);
+  gint index = get_day_of_week () % size;
   /* We need to unwrap the variant and then the inner string first */
   g_autoptr(GVariant) child_variant = g_variant_get_child_value (variant, index);
   g_autoptr(GVariant) child_value = g_variant_get_variant (child_variant);
@@ -350,7 +357,7 @@ article_card_descriptions_cb (GObject *source,
             {
               if (g_strcmp0 (key, "blurbs") == 0)
                 {
-                  g_autofree gchar *title = select_random_string_from_variant (value);
+                  g_autofree gchar *title = select_string_from_variant_from_day (value);
 
                   if (title)
                     {
