@@ -3,6 +3,7 @@
 #include "eks-search-provider.h"
 
 #include "eks-knowledge-app-dbus.h"
+#include "eks-provider-iface.h"
 #include "eks-search-provider-dbus.h"
 
 #include <eos-knowledge-content.h>
@@ -23,14 +24,17 @@ struct _EksSearchProvider
   GHashTable *object_cache;
 };
 
-G_DEFINE_TYPE (EksSearchProvider,
-               eks_search_provider,
-               G_TYPE_OBJECT)
+static void eks_search_provider_interface_init (EksProviderInterface *);
+
+G_DEFINE_TYPE_WITH_CODE (EksSearchProvider,
+                         eks_search_provider,
+                         G_TYPE_OBJECT,
+                         G_IMPLEMENT_INTERFACE (EKS_TYPE_PROVIDER,
+                                                eks_search_provider_interface_init));
 
 enum {
   PROP_0,
   PROP_APPLICATION_ID,
-  PROP_SKELETON,
   NPROPS
 };
 
@@ -48,10 +52,6 @@ eks_search_provider_get_property (GObject    *object,
     {
     case PROP_APPLICATION_ID:
       g_value_set_string (value, self->application_id);
-      break;
-
-    case PROP_SKELETON:
-      g_value_set_object (value, self->skeleton);
       break;
 
     default:
@@ -106,10 +106,6 @@ eks_search_provider_class_init (EksSearchProviderClass *klass)
     g_param_spec_string ("application-id", "Application Id", "Application Id",
       "", G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
 
-  eks_search_provider_props[PROP_SKELETON] =
-    g_param_spec_object ("skeleton", "Skeleton", "Skeleton",
-      G_TYPE_DBUS_INTERFACE_SKELETON, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-
   g_object_class_install_properties (object_class,
                                      NPROPS,
                                      eks_search_provider_props);
@@ -140,7 +136,7 @@ ensure_app_proxy (EksSearchProvider *self)
                                                                  &error);
   if (error != NULL)
     {
-      g_warning ("Error initializing dbus proxy: %s\n", error->message);
+      g_warning ("Error initializing dbus proxy: %s", error->message);
       g_clear_error (&error);
       return FALSE;
     }
@@ -315,7 +311,7 @@ handle_activate_result (EksSearchProvider2 *skeleton,
                                             &error);
   if (error != NULL)
     {
-      g_warning ("Error activating result: %s\n", error->message);
+      g_warning ("Error activating result: %s", error->message);
       g_clear_error (&error);
     }
   return TRUE;
@@ -340,10 +336,24 @@ handle_launch_search (EksSearchProvider2 *skeleton,
                                              &error);
   if (error != NULL)
     {
-      g_warning ("Error launching search: %s\n", error->message);
+      g_warning ("Error launching search: %s", error->message);
       g_clear_error (&error);
     }
   return TRUE;
+}
+
+static GDBusInterfaceSkeleton *
+eks_search_provider_skeleton_for_interface (EksProvider *provider,
+                                            const gchar *interface)
+{
+  EksSearchProvider *self = EKS_SEARCH_PROVIDER (provider);
+  return G_DBUS_INTERFACE_SKELETON (self->skeleton);
+}
+
+static void
+eks_search_provider_interface_init (EksProviderInterface *iface)
+{
+  iface->skeleton_for_interface = eks_search_provider_skeleton_for_interface;
 }
 
 static void
