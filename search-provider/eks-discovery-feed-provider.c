@@ -531,6 +531,7 @@ get_word_of_the_day_content_cb (GObject *source,
 
   add_key_value_pair_from_model_to_variant (model, &builder, "title");
   add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
+  add_key_value_pair_from_model_to_variant (model, &builder, "license");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   g_dbus_method_invocation_return_value (state->invocation,
@@ -555,13 +556,12 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Build up tags_match_any */
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "word_of_day");
+    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
     GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
-                                                     "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                      "limit", 365,
                                                      "app-id", self->application_id,
                                                      NULL);
@@ -637,13 +637,12 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Build up tags_match_any */
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "quote_of_day");
+    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
     GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
-                                                     "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                      "limit", 365,
                                                      "app-id", self->application_id,
                                                      NULL);
