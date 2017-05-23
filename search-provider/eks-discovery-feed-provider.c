@@ -18,8 +18,10 @@ struct _EksDiscoveryFeedDatabaseContentProvider
   gchar *application_id;
   EksDiscoveryFeedContent *content_skeleton;
   EksDiscoveryFeedContent *content_app_proxy;
-  EksDiscoveryFeedEvergreen *evergreen_skeleton;
-  EksDiscoveryFeedEvergreen *evergreen_app_proxy;
+  EksDiscoveryFeedQuote *quote_skeleton;
+  EksDiscoveryFeedQuote *quote_app_proxy;
+  EksDiscoveryFeedWord *word_skeleton;
+  EksDiscoveryFeedWord *word_app_proxy;
   EksDiscoveryFeedNews *news_skeleton;
   EksDiscoveryFeedNews *news_app_proxy;
   GCancellable *cancellable;
@@ -87,10 +89,12 @@ eks_discovery_feed_database_content_provider_finalize (GObject *object)
 
   g_clear_pointer (&self->application_id, g_free);
   g_clear_object (&self->content_skeleton);
-  g_clear_object (&self->evergreen_skeleton);
+  g_clear_object (&self->quote_skeleton);
+  g_clear_object (&self->word_skeleton);
   g_clear_object (&self->news_skeleton);
   g_clear_object (&self->content_app_proxy);
-  g_clear_object (&self->evergreen_app_proxy);
+  g_clear_object (&self->quote_app_proxy);
+  g_clear_object (&self->word_app_proxy);
   g_clear_object (&self->news_app_proxy);
   g_clear_object (&self->cancellable);
 
@@ -148,20 +152,44 @@ ensure_content_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
 }
 
 static gboolean
-ensure_evergreen_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
+ensure_quote_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
 {
-  if (self->evergreen_app_proxy != NULL)
+  if (self->quote_app_proxy != NULL)
     return TRUE;
 
   g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
   GError *error = NULL;
-  self->evergreen_app_proxy = eks_discovery_feed_evergreen_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                                                   G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
-                                                                                   G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
-                                                                                   self->application_id,
-                                                                                   object_path,
-                                                                                   NULL,
-                                                                                   &error);
+  self->quote_app_proxy = eks_discovery_feed_quote_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
+                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+                                                                           self->application_id,
+                                                                           object_path,
+                                                                           NULL,
+                                                                           &error);
+  if (error != NULL)
+    {
+      g_warning ("Error initializing dbus proxy: %s\n", error->message);
+      g_clear_error (&error);
+      return FALSE;
+    }
+  return TRUE;
+}
+
+static gboolean
+ensure_word_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
+{
+  if (self->word_app_proxy != NULL)
+    return TRUE;
+
+  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
+  GError *error = NULL;
+  self->word_app_proxy = eks_discovery_feed_word_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
+                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+                                                                         self->application_id,
+                                                                         object_path,
+                                                                         NULL,
+                                                                         &error);
   if (error != NULL)
     {
       g_warning ("Error initializing dbus proxy: %s\n", error->message);
@@ -519,7 +547,7 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
 
-    if (!ensure_evergreen_app_proxy (self))
+    if (!ensure_word_app_proxy (self))
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
@@ -601,7 +629,7 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
 
-    if (!ensure_evergreen_app_proxy (self))
+    if (!ensure_quote_app_proxy (self))
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
@@ -738,8 +766,10 @@ eks_discovery_feed_database_content_provider_skeleton_for_interface (EksProvider
 
   if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedContent") == 0)
       return G_DBUS_INTERFACE_SKELETON (self->content_skeleton);
-  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedEvergreen") == 0)
-      return G_DBUS_INTERFACE_SKELETON(self->evergreen_skeleton);
+  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedQuote") == 0)
+      return G_DBUS_INTERFACE_SKELETON(self->quote_skeleton);
+  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedWord") == 0)
+      return G_DBUS_INTERFACE_SKELETON(self->word_skeleton);
   else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedNews") == 0)
       return G_DBUS_INTERFACE_SKELETON (self->news_skeleton);
 
@@ -760,11 +790,13 @@ eks_discovery_feed_database_content_provider_init (EksDiscoveryFeedDatabaseConte
   g_signal_connect (self->content_skeleton, "handle-article-card-descriptions",
                     G_CALLBACK (handle_article_card_descriptions), self);
 
-  self->evergreen_skeleton = eks_discovery_feed_evergreen_skeleton_new ();
-  g_signal_connect (self->evergreen_skeleton, "handle-get-word-of-the-day",
-                    G_CALLBACK (handle_get_word_of_the_day), self);
-  g_signal_connect (self->evergreen_skeleton, "handle-get-quote-of-the-day",
+  self->quote_skeleton = eks_discovery_feed_quote_skeleton_new ();
+  g_signal_connect (self->quote_skeleton, "handle-get-quote-of-the-day",
                     G_CALLBACK (handle_get_quote_of_the_day), self);
+
+  self->word_skeleton = eks_discovery_feed_word_skeleton_new ();
+  g_signal_connect (self->word_skeleton, "handle-get-word-of-the-day",
+                    G_CALLBACK (handle_get_word_of_the_day), self);
 
   self->news_skeleton = eks_discovery_feed_news_skeleton_new ();
   g_signal_connect (self->news_skeleton, "handle-get-recent-news",

@@ -23,11 +23,13 @@
       <arg type="aa{ss}" name="Results" direction="out" />
     </method>
   </interface>
-  <interface name="com.endlessm.DiscoveryFeedEvergreen">
-    <method name="GetWordOfTheDay">
+  <interface name="com.endlessm.DiscoveryFeedQuote">
+    <method name="GetQuoteOfTheDay">
       <arg type="a{ss}" name="Results" direction="out" />
     </method>
-    <method name="GetQuoteOfTheDay">
+  </interface>
+  <interface name="com.endlessm.DiscoveryFeedWord">
+    <method name="GetWordOfTheDay">
       <arg type="a{ss}" name="Results" direction="out" />
     </method>
   </interface>
