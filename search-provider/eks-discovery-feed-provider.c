@@ -18,6 +18,10 @@ struct _EksDiscoveryFeedDatabaseContentProvider
   gchar *application_id;
   EksDiscoveryFeedContent *content_skeleton;
   EksDiscoveryFeedContent *content_app_proxy;
+  EksDiscoveryFeedQuote *quote_skeleton;
+  EksDiscoveryFeedQuote *quote_app_proxy;
+  EksDiscoveryFeedWord *word_skeleton;
+  EksDiscoveryFeedWord *word_app_proxy;
   EksDiscoveryFeedNews *news_skeleton;
   EksDiscoveryFeedNews *news_app_proxy;
   GCancellable *cancellable;
@@ -85,8 +89,12 @@ eks_discovery_feed_database_content_provider_finalize (GObject *object)
 
   g_clear_pointer (&self->application_id, g_free);
   g_clear_object (&self->content_skeleton);
+  g_clear_object (&self->quote_skeleton);
+  g_clear_object (&self->word_skeleton);
   g_clear_object (&self->news_skeleton);
   g_clear_object (&self->content_app_proxy);
+  g_clear_object (&self->quote_app_proxy);
+  g_clear_object (&self->word_app_proxy);
   g_clear_object (&self->news_app_proxy);
   g_clear_object (&self->cancellable);
 
@@ -137,6 +145,54 @@ ensure_content_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
   if (error != NULL)
     {
       g_warning ("Error initializing dbus proxy: %s", error->message);
+      g_clear_error (&error);
+      return FALSE;
+    }
+  return TRUE;
+}
+
+static gboolean
+ensure_quote_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
+{
+  if (self->quote_app_proxy != NULL)
+    return TRUE;
+
+  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
+  GError *error = NULL;
+  self->quote_app_proxy = eks_discovery_feed_quote_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
+                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+                                                                           self->application_id,
+                                                                           object_path,
+                                                                           NULL,
+                                                                           &error);
+  if (error != NULL)
+    {
+      g_warning ("Error initializing dbus proxy: %s\n", error->message);
+      g_clear_error (&error);
+      return FALSE;
+    }
+  return TRUE;
+}
+
+static gboolean
+ensure_word_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
+{
+  if (self->word_app_proxy != NULL)
+    return TRUE;
+
+  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
+  GError *error = NULL;
+  self->word_app_proxy = eks_discovery_feed_word_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
+                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+                                                                         self->application_id,
+                                                                         object_path,
+                                                                         NULL,
+                                                                         &error);
+  if (error != NULL)
+    {
+      g_warning ("Error initializing dbus proxy: %s\n", error->message);
       g_clear_error (&error);
       return FALSE;
     }
@@ -234,6 +290,13 @@ get_day_of_week (void)
   return g_date_time_get_day_of_week (datetime);
 }
 
+static gint
+get_day_of_year (void)
+{
+  g_autoptr(GDateTime) datetime = g_date_time_new_now_local ();
+  return g_date_time_get_day_of_year (datetime);
+}
+
 static gchar *
 select_string_from_variant_from_day (GVariant *variant)
 {
@@ -250,6 +313,30 @@ typedef enum {
   DISCOVERY_FEED_NO_CUSTOM_PROPS = 0,
   DISCOVERY_FEED_SET_CUSTOM_TITLE = 1 << 0
 } DiscoveryFeedCustomProps;
+
+static gboolean
+models_for_result (EkncEngine   *engine,
+                   const gchar  *application_id,
+                   GAsyncResult *result,
+                   GSList       **models,
+                   GError       **error)
+{
+  g_autoptr(EkncQueryResults) results = NULL;
+  if (!(results = eknc_engine_query_finish (engine, result, error)))
+      return FALSE;
+
+  EkncDomain *domain = eknc_engine_get_domain_for_app (engine,
+                                                       application_id,
+                                                       error);
+  if (domain == NULL)
+      return FALSE;
+
+  *models = g_slist_copy_deep (eknc_query_results_get_models (results),
+                               (GCopyFunc) g_object_ref,
+                               NULL);
+
+  return TRUE;
+}
 
 static gboolean
 models_and_shards_for_result (EkncEngine   *engine,
@@ -435,6 +522,163 @@ handle_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
 }
 
 static void
+get_word_of_the_day_content_cb (GObject *source,
+                                GAsyncResult *result,
+                                gpointer user_data)
+{
+  EkncEngine *engine = EKNC_ENGINE (source);
+  DiscoveryFeedQueryState *state = user_data;
+
+  g_application_release (g_application_get_default ());
+
+  GError *error = NULL;
+  GSList *models = NULL;
+
+  if (!models_for_result (engine,
+                          state->provider->application_id,
+                          result,
+                          &models,
+                          &error))
+    {
+      g_dbus_method_invocation_take_error (state->invocation, error);
+      discovery_feed_query_state_free (state);
+      return;
+    }
+
+  GVariantBuilder builder;
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
+
+  gint index = get_day_of_year () % g_slist_length (models);
+  EkncContentObjectModel *model = g_slist_nth (models, index)->data;
+
+  add_key_value_pair_from_model_to_variant (model, &builder, "title");
+  add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
+  add_key_value_pair_from_model_to_variant (model, &builder, "license");
+  add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
+
+  g_dbus_method_invocation_return_value (state->invocation,
+                                         g_variant_new ("(a{ss})", &builder));
+  g_slist_free_full (models, g_object_unref);
+  discovery_feed_query_state_free (state);
+}
+
+static gboolean
+handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
+                            GDBusMethodInvocation                   *invocation,
+                            gpointer                                 user_data)
+{
+    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+
+    if (!ensure_word_app_proxy (self))
+      return TRUE;
+
+    EkncEngine *engine = eknc_engine_get_default ();
+
+    /* Build up tags_match_any */
+    GVariantBuilder tags_match_any_builder;
+    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
+    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
+    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+
+    /* Create query and run it */
+    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                     "tags-match-any", tags_match_any,
+                                                     "limit", 365,
+                                                     "app-id", self->application_id,
+                                                     NULL);
+
+    /* Hold the application so that it doesn't go away whilst we're handling
+     * the query */
+    g_application_hold (g_application_get_default ());
+
+    eknc_engine_query (engine,
+                       query,
+                       self->cancellable,
+                       get_word_of_the_day_content_cb,
+                       discovery_feed_query_state_new (invocation, self));
+
+    return TRUE;
+}
+
+static void
+get_quote_of_the_day_content_cb (GObject *source,
+                                 GAsyncResult *result,
+                                 gpointer user_data)
+{
+  EkncEngine *engine = EKNC_ENGINE (source);
+  DiscoveryFeedQueryState *state = user_data;
+
+  g_application_release (g_application_get_default ());
+
+  GError *error = NULL;
+  GSList *models = NULL;
+
+  if (!models_for_result (engine,
+                          state->provider->application_id,
+                          result,
+                          &models,
+                          &error))
+    {
+      g_dbus_method_invocation_take_error (state->invocation, error);
+      discovery_feed_query_state_free (state);
+      return;
+    }
+
+  GVariantBuilder builder;
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
+
+  gint index = get_day_of_year () % g_slist_length (models);
+  EkncContentObjectModel *model = g_slist_nth (models, index)->data;
+
+  add_key_value_pair_from_model_to_variant (model, &builder, "title");
+  add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
+  add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
+
+  g_dbus_method_invocation_return_value (state->invocation,
+                                         g_variant_new ("(a{ss})", &builder));
+  g_slist_free_full (models, g_object_unref);
+  discovery_feed_query_state_free (state);
+}
+
+static gboolean
+handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
+                             GDBusMethodInvocation                   *invocation,
+                             gpointer                                 user_data)
+{
+    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+
+    if (!ensure_quote_app_proxy (self))
+      return TRUE;
+
+    EkncEngine *engine = eknc_engine_get_default ();
+
+    /* Build up tags_match_any */
+    GVariantBuilder tags_match_any_builder;
+    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
+    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
+    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+
+    /* Create query and run it */
+    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                     "tags-match-any", tags_match_any,
+                                                     "limit", 365,
+                                                     "app-id", self->application_id,
+                                                     NULL);
+
+    /* Hold the application so that it doesn't go away whilst we're handling
+     * the query */
+    g_application_hold (g_application_get_default ());
+
+    eknc_engine_query (engine,
+                       query,
+                       self->cancellable,
+                       get_quote_of_the_day_content_cb,
+                       discovery_feed_query_state_new (invocation, self));
+
+    return TRUE;
+}
+
+static void
 recent_news_articles_cb (GObject *source,
                          GAsyncResult *result,
                          gpointer user_data)
@@ -539,6 +783,10 @@ eks_discovery_feed_database_content_provider_skeleton_for_interface (EksProvider
 
   if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedContent") == 0)
       return G_DBUS_INTERFACE_SKELETON (self->content_skeleton);
+  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedQuote") == 0)
+      return G_DBUS_INTERFACE_SKELETON(self->quote_skeleton);
+  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedWord") == 0)
+      return G_DBUS_INTERFACE_SKELETON(self->word_skeleton);
   else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedNews") == 0)
       return G_DBUS_INTERFACE_SKELETON (self->news_skeleton);
 
@@ -558,6 +806,14 @@ eks_discovery_feed_database_content_provider_init (EksDiscoveryFeedDatabaseConte
   self->content_skeleton = eks_discovery_feed_content_skeleton_new ();
   g_signal_connect (self->content_skeleton, "handle-article-card-descriptions",
                     G_CALLBACK (handle_article_card_descriptions), self);
+
+  self->quote_skeleton = eks_discovery_feed_quote_skeleton_new ();
+  g_signal_connect (self->quote_skeleton, "handle-get-quote-of-the-day",
+                    G_CALLBACK (handle_get_quote_of_the_day), self);
+
+  self->word_skeleton = eks_discovery_feed_word_skeleton_new ();
+  g_signal_connect (self->word_skeleton, "handle-get-word-of-the-day",
+                    G_CALLBACK (handle_get_word_of_the_day), self);
 
   self->news_skeleton = eks_discovery_feed_news_skeleton_new ();
   g_signal_connect (self->news_skeleton, "handle-get-recent-news",

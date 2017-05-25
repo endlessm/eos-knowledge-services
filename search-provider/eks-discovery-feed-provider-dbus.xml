@@ -23,6 +23,16 @@
       <arg type="aa{ss}" name="Results" direction="out" />
     </method>
   </interface>
+  <interface name="com.endlessm.DiscoveryFeedQuote">
+    <method name="GetQuoteOfTheDay">
+      <arg type="a{ss}" name="Results" direction="out" />
+    </method>
+  </interface>
+  <interface name="com.endlessm.DiscoveryFeedWord">
+    <method name="GetWordOfTheDay">
+      <arg type="a{ss}" name="Results" direction="out" />
+    </method>
+  </interface>
   <interface name="com.endlessm.DiscoveryFeedNews">
     <method name="GetRecentNews">
       <arg type="as" name="Shards" direction="out" />
