@@ -315,6 +315,30 @@ typedef enum {
 } DiscoveryFeedCustomProps;
 
 static gboolean
+models_for_result (EkncEngine   *engine,
+                   const gchar  *application_id,
+                   GAsyncResult *result,
+                   GSList       **models,
+                   GError       **error)
+{
+  g_autoptr(EkncQueryResults) results = NULL;
+  if (!(results = eknc_engine_query_finish (engine, result, error)))
+      return FALSE;
+
+  EkncDomain *domain = eknc_engine_get_domain_for_app (engine,
+                                                       application_id,
+                                                       error);
+  if (domain == NULL)
+      return FALSE;
+
+  *models = g_slist_copy_deep (eknc_query_results_get_models (results),
+                               (GCopyFunc) g_object_ref,
+                               NULL);
+
+  return TRUE;
+}
+
+static gboolean
 models_and_shards_for_result (EkncEngine   *engine,
                               const gchar  *application_id,
                               GAsyncResult *result,
@@ -509,14 +533,12 @@ get_word_of_the_day_content_cb (GObject *source,
 
   GError *error = NULL;
   GSList *models = NULL;
-  GSList *shards = NULL;
 
-  if (!models_and_shards_for_result (engine,
-                                     state->provider->application_id,
-                                     result,
-                                     &models,
-                                     &shards,
-                                     &error))
+  if (!models_for_result (engine,
+                          state->provider->application_id,
+                          result,
+                          &models,
+                          &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
       discovery_feed_query_state_free (state);
@@ -537,7 +559,6 @@ get_word_of_the_day_content_cb (GObject *source,
   g_dbus_method_invocation_return_value (state->invocation,
                                          g_variant_new ("(a{ss})", &builder));
   g_slist_free_full (models, g_object_unref);
-  g_slist_free_full (shards, g_object_unref);
   discovery_feed_query_state_free (state);
 }
 
@@ -591,14 +612,12 @@ get_quote_of_the_day_content_cb (GObject *source,
 
   GError *error = NULL;
   GSList *models = NULL;
-  GSList *shards = NULL;
 
-  if (!models_and_shards_for_result (engine,
-                                     state->provider->application_id,
-                                     result,
-                                     &models,
-                                     &shards,
-                                     &error))
+  if (!models_for_result (engine,
+                          state->provider->application_id,
+                          result,
+                          &models,
+                          &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
       discovery_feed_query_state_free (state);
@@ -618,7 +637,6 @@ get_quote_of_the_day_content_cb (GObject *source,
   g_dbus_method_invocation_return_value (state->invocation,
                                          g_variant_new ("(a{ss})", &builder));
   g_slist_free_full (models, g_object_unref);
-  g_slist_free_full (shards, g_object_unref);
   discovery_feed_query_state_free (state);
 }
 
