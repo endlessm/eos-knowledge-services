@@ -9,6 +9,7 @@
 #include <eos-knowledge-content.h>
 #include <eos-shard/eos-shard-shard-file.h>
 
+#include <stdio.h>
 #include <string.h>
 
 struct _EksDiscoveryFeedDatabaseContentProvider
@@ -24,6 +25,8 @@ struct _EksDiscoveryFeedDatabaseContentProvider
   EksDiscoveryFeedWord *word_app_proxy;
   EksDiscoveryFeedNews *news_skeleton;
   EksDiscoveryFeedNews *news_app_proxy;
+  EksDiscoveryFeedVideo *video_skeleton;
+  EksDiscoveryFeedVideo *video_app_proxy;
   GCancellable *cancellable;
 };
 
@@ -92,10 +95,12 @@ eks_discovery_feed_database_content_provider_finalize (GObject *object)
   g_clear_object (&self->quote_skeleton);
   g_clear_object (&self->word_skeleton);
   g_clear_object (&self->news_skeleton);
+  g_clear_object (&self->video_skeleton);
   g_clear_object (&self->content_app_proxy);
   g_clear_object (&self->quote_app_proxy);
   g_clear_object (&self->word_app_proxy);
   g_clear_object (&self->news_app_proxy);
+  g_clear_object (&self->video_app_proxy);
   g_clear_object (&self->cancellable);
 
   G_OBJECT_CLASS (eks_discovery_feed_database_content_provider_parent_class)->finalize (object);
@@ -223,6 +228,30 @@ ensure_news_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
   return TRUE;
 }
 
+static gboolean
+ensure_video_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
+{
+  if (self->video_app_proxy != NULL)
+    return TRUE;
+
+  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
+  GError *error = NULL;
+  self->video_app_proxy = eks_discovery_feed_video_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
+                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+                                                                           self->application_id,
+                                                                           object_path,
+                                                                           NULL,
+                                                                           &error);
+  if (error != NULL)
+    {
+      g_warning ("Error initializing dbus proxy: %s", error->message);
+      g_clear_error (&error);
+      return FALSE;
+    }
+  return TRUE;
+}
+
 typedef struct {
   GDBusMethodInvocation *invocation;
   EksDiscoveryFeedDatabaseContentProvider  *provider;
@@ -281,6 +310,19 @@ add_key_value_pair_from_model_to_variant (EkncContentObjectModel *model,
   g_autofree gchar *underscore_key = underscorify (key);
   g_object_get (model, key, &value, NULL);
   add_key_value_pair_to_variant (builder, underscore_key, value);
+}
+
+static void
+add_key_int_value_pair_from_model_to_variant (EkncContentObjectModel *model,
+                                              GVariantBuilder        *builder,
+                                              const char             *key)
+{
+  gint value;
+  g_autofree gchar *str_value = malloc (sizeof (gchar) * 8);
+  g_autofree gchar *underscore_key = underscorify (key);
+  g_object_get (model, key, &value, NULL);
+  snprintf(str_value, 8, "%i", value);
+  add_key_value_pair_to_variant (builder, underscore_key, str_value);
 }
 
 static gint
@@ -775,6 +817,106 @@ handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     return TRUE;
 }
 
+static void
+relevant_video_cb (GObject *source,
+                   GAsyncResult *result,
+                   gpointer user_data)
+{
+  EkncEngine *engine = EKNC_ENGINE (source);
+  DiscoveryFeedQueryState *state = user_data;
+
+  g_application_release (g_application_get_default ());
+
+  GError *error = NULL;
+  GSList *models = NULL;
+  GSList *shards = NULL;
+
+  if (!models_and_shards_for_result (engine,
+                                     state->provider->application_id,
+                                     result,
+                                     &models,
+                                     &shards,
+                                     &error))
+    {
+      g_dbus_method_invocation_take_error (state->invocation, error);
+      discovery_feed_query_state_free (state);
+
+      /* No need to free_full the out models and shards here,
+       * g_slist_copy_deep is not called if this function returns FALSE. */
+      return;
+    }
+
+  GVariantBuilder shard_builder;
+  string_array_variant_from_shard_list (&shard_builder, shards);
+
+  GVariantBuilder builder;
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
+  for (GSList *l = models; l; l = l->next)
+    {
+      if (!EKNC_IS_VIDEO_OBJECT_MODEL (l->data))
+        continue;
+
+      /* Start building up object */
+      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
+
+      EkncContentObjectModel *model = l->data;
+
+      add_key_value_pair_from_model_to_variant (model, &builder, "title");
+      add_key_int_value_pair_from_model_to_variant (model, &builder, "duration");
+      add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
+      add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
+
+      /* Stop building object */
+      g_variant_builder_close (&builder);
+    }
+  g_dbus_method_invocation_return_value (state->invocation,
+                                         g_variant_new ("(asaa{ss})", &shard_builder, &builder));
+  g_slist_free_full (models, g_object_unref);
+  g_slist_free_full (shards, g_object_unref);
+  discovery_feed_query_state_free (state);
+}
+
+static gboolean
+handle_get_relevant_video (EksDiscoveryFeedDatabaseContentProvider *skeleton,
+                           GDBusMethodInvocation                  *invocation,
+                           gpointer                                user_data)
+{
+    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+
+    if (!ensure_video_app_proxy (self))
+      return TRUE;
+
+    EkncEngine *engine = eknc_engine_get_default ();
+
+    /* Build up tags_match_any */
+    GVariantBuilder tags_match_any_builder;
+    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
+    g_variant_builder_add (&tags_match_any_builder, "s", "EknMediaObject");
+    
+    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+
+    /* Create query and run it */
+    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                     "tags-match-any", tags_match_any,
+                                                     "sort", EKNC_QUERY_OBJECT_SORT_DATE,
+                                                     "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
+                                                     "limit", 5,
+                                                     "app-id", self->application_id,
+                                                     NULL);
+
+    /* Hold the application so that it doesn't go away whilst we're handling
+     * the query */
+    g_application_hold (g_application_get_default ());
+
+    eknc_engine_query (engine,
+                       query,
+                       self->cancellable,
+                       relevant_video_cb,
+                       discovery_feed_query_state_new (invocation, self));
+
+    return TRUE;
+}
+
 static GDBusInterfaceSkeleton *
 eks_discovery_feed_database_content_provider_skeleton_for_interface (EksProvider *provider,
                                                                      const gchar *interface)
@@ -789,6 +931,8 @@ eks_discovery_feed_database_content_provider_skeleton_for_interface (EksProvider
       return G_DBUS_INTERFACE_SKELETON(self->word_skeleton);
   else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedNews") == 0)
       return G_DBUS_INTERFACE_SKELETON (self->news_skeleton);
+  else if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedVideo") == 0)
+      return G_DBUS_INTERFACE_SKELETON (self->video_skeleton);
 
   g_assert_not_reached ();
   return NULL;
@@ -818,4 +962,8 @@ eks_discovery_feed_database_content_provider_init (EksDiscoveryFeedDatabaseConte
   self->news_skeleton = eks_discovery_feed_news_skeleton_new ();
   g_signal_connect (self->news_skeleton, "handle-get-recent-news",
                     G_CALLBACK (handle_get_recent_news), self);
+
+  self->video_skeleton = eks_discovery_feed_video_skeleton_new ();
+  g_signal_connect (self->video_skeleton, "handle-get-relevant-video",
+                    G_CALLBACK (handle_get_relevant_video), self);
 }
