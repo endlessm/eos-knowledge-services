@@ -312,9 +312,9 @@ add_key_value_pair_from_model_to_variant (EkncContentObjectModel *model,
 }
 
 static void
-add_key_int_value_pair_from_model_to_variant (EkncContentObjectModel *model,
-                                              GVariantBuilder        *builder,
-                                              const char             *key)
+add_key_value_int_to_str_pair_from_model_to_variant (EkncContentObjectModel *model,
+                                                     GVariantBuilder        *builder,
+                                                     const char             *key)
 {
   gint value;
   g_autofree gchar *str_value = malloc (sizeof (gchar) * 8);
@@ -862,7 +862,7 @@ relevant_video_cb (GObject *source,
       EkncContentObjectModel *model = l->data;
 
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
-      add_key_int_value_pair_from_model_to_variant (model, &builder, "duration");
+      add_key_value_int_to_str_pair_from_model_to_variant (model, &builder, "duration");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
