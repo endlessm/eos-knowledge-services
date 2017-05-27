@@ -877,9 +877,9 @@ relevant_video_cb (GObject *source,
 }
 
 static gboolean
-handle_get_relevant_video (EksDiscoveryFeedDatabaseContentProvider *skeleton,
-                           GDBusMethodInvocation                  *invocation,
-                           gpointer                                user_data)
+handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
+                   GDBusMethodInvocation                  *invocation,
+                   gpointer                                user_data)
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
 
@@ -964,6 +964,6 @@ eks_discovery_feed_database_content_provider_init (EksDiscoveryFeedDatabaseConte
                     G_CALLBACK (handle_get_recent_news), self);
 
   self->video_skeleton = eks_discovery_feed_video_skeleton_new ();
-  g_signal_connect (self->video_skeleton, "handle-get-relevant-video",
-                    G_CALLBACK (handle_get_relevant_video), self);
+  g_signal_connect (self->video_skeleton, "handle-get-videos",
+                    G_CALLBACK (handle_get_videos), self);
 }
