@@ -407,19 +407,16 @@ models_and_shards_for_result (EkncEngine   *engine,
   return TRUE;
 }
 
-static void
-string_array_variant_from_shard_list (GVariantBuilder *string_array_builder,
-                                      GSList          *shards)
+GStrv
+strv_from_string_list (GSList *string_list)
 {
-  g_variant_builder_init (string_array_builder, G_VARIANT_TYPE_STRING_ARRAY);
-  for (GSList *l = shards; l; l = l->next)
-    {
-      g_autofree gchar *shard_path = NULL;
-      EosShardShardFile *shard = l->data;
+  GStrv strv = g_new0 (gchar *, g_slist_length (string_list));
+  guint count = 0;
 
-      g_object_get (shard, "path", &shard_path, NULL);
-      g_variant_builder_add (string_array_builder, "s", shard_path);
-    }
+  for (GSList *l = string_list; l; l = l->next)
+    strv[count++] = l->data;
+
+  return strv;
 }
 
 static void
@@ -451,8 +448,7 @@ article_card_descriptions_cb (GObject *source,
       return;
     }
 
-  GVariantBuilder shard_builder;
-  string_array_variant_from_shard_list (&shard_builder, shards);
+  g_auto(GStrv) shards_strv = strv_from_string_list (shards);
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
@@ -511,8 +507,11 @@ article_card_descriptions_cb (GObject *source,
       /* Stop building object */
       g_variant_builder_close (&builder);
     }
-  g_dbus_method_invocation_return_value (state->invocation,
-                                         g_variant_new ("(asaa{ss})", &shard_builder, &builder));
+
+  eks_discovery_feed_content_complete_article_card_descriptions (EKS_DISCOVERY_FEED_CONTENT (source),
+                                                                 state->invocation,
+                                                                 (const gchar * const *) shards_strv,
+                                                                 g_variant_builder_end (&builder));
   g_slist_free_full (models, g_object_unref);
   g_slist_free_full (shards, g_object_unref);
   discovery_feed_query_state_free (state);
@@ -597,8 +596,9 @@ get_word_of_the_day_content_cb (GObject *source,
   add_key_value_pair_from_model_to_variant (model, &builder, "type");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
-  g_dbus_method_invocation_return_value (state->invocation,
-                                         g_variant_new ("(a{ss})", &builder));
+  eks_discovery_feed_word_complete_get_word_of_the_day (EKS_DISCOVERY_FEED_WORD (source),
+                                                        state->invocation,
+                                                        g_variant_builder_end (&builder));
   g_slist_free_full (models, g_object_unref);
   discovery_feed_query_state_free (state);
 }
@@ -675,8 +675,9 @@ get_quote_of_the_day_content_cb (GObject *source,
   add_key_value_pair_from_model_to_variant (model, &builder, "author");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
-  g_dbus_method_invocation_return_value (state->invocation,
-                                         g_variant_new ("(a{ss})", &builder));
+  eks_discovery_feed_quote_complete_get_quote_of_the_day (EKS_DISCOVERY_FEED_QUOTE (source),
+                                                          state->invocation,
+                                                          g_variant_builder_end (&builder));
   g_slist_free_full (models, g_object_unref);
   discovery_feed_query_state_free (state);
 }
@@ -748,8 +749,7 @@ recent_news_articles_cb (GObject *source,
       return;
     }
 
-  GVariantBuilder shard_builder;
-  string_array_variant_from_shard_list (&shard_builder, shards);
+  g_auto(GStrv) shards_strv = strv_from_string_list (shards);
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
@@ -769,8 +769,10 @@ recent_news_articles_cb (GObject *source,
       /* Stop building object */
       g_variant_builder_close (&builder);
     }
-  g_dbus_method_invocation_return_value (state->invocation,
-                                         g_variant_new ("(asaa{ss})", &shard_builder, &builder));
+  eks_discovery_feed_news_complete_get_recent_news (EKS_DISCOVERY_FEED_NEWS (source),
+                                                    state->invocation,
+                                                    (const gchar * const *) shards_strv,
+                                                    g_variant_builder_end (&builder));
   g_slist_free_full (models, g_object_unref);
   g_slist_free_full (shards, g_object_unref);
   discovery_feed_query_state_free (state);
@@ -845,8 +847,7 @@ relevant_video_cb (GObject *source,
       return;
     }
 
-  GVariantBuilder shard_builder;
-  string_array_variant_from_shard_list (&shard_builder, shards);
+  g_auto(GStrv) shards_strv = strv_from_string_list (shards);
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
@@ -868,8 +869,10 @@ relevant_video_cb (GObject *source,
       /* Stop building object */
       g_variant_builder_close (&builder);
     }
-  g_dbus_method_invocation_return_value (state->invocation,
-                                         g_variant_new ("(asaa{ss})", &shard_builder, &builder));
+  eks_discovery_feed_video_complete_get_videos (EKS_DISCOVERY_FEED_VIDEO (source),
+                                                state->invocation,
+                                                (const gchar * const *) shards_strv,
+                                                g_variant_builder_end (&builder));
   g_slist_free_full (models, g_object_unref);
   g_slist_free_full (shards, g_object_unref);
   discovery_feed_query_state_free (state);
