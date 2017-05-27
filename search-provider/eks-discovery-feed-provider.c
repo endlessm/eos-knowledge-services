@@ -320,7 +320,7 @@ add_key_int_value_pair_from_model_to_variant (EkncContentObjectModel *model,
   g_autofree gchar *str_value = malloc (sizeof (gchar) * 8);
   g_autofree gchar *underscore_key = underscorify (key);
   g_object_get (model, key, &value, NULL);
-  snprintf(str_value, 8, "%i", value);
+  snprintf (str_value, 8, "%i", value);
   add_key_value_pair_to_variant (builder, underscore_key, str_value);
 }
 
