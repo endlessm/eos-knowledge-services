@@ -139,7 +139,7 @@ ensure_content_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
     return TRUE;
 
   g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
-  GError *error = NULL;
+  g_autoptr(GError) error = NULL;
   self->content_app_proxy = eks_discovery_feed_content_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
                                                                                G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
                                                                                G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
@@ -150,7 +150,6 @@ ensure_content_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
   if (error != NULL)
     {
       g_warning ("Error initializing dbus proxy: %s", error->message);
-      g_clear_error (&error);
       return FALSE;
     }
   return TRUE;
