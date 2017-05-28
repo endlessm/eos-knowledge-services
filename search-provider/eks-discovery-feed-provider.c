@@ -408,13 +408,19 @@ models_and_shards_for_result (EkncEngine   *engine,
 }
 
 GStrv
-strv_from_string_list (GSList *string_list)
+strv_from_shard_list (GSList *string_list)
 {
   GStrv strv = g_new0 (gchar *, g_slist_length (string_list));
   guint count = 0;
 
   for (GSList *l = string_list; l; l = l->next)
-    strv[count++] = l->data;
+    {
+      EosShardShardFile *shard = l->data;
+      gchar  *shard_path = NULL;
+
+      g_object_get (shard, "path", &shard_path, NULL);
+      strv[count++] = shard_path;
+    }
 
   return strv;
 }
@@ -448,7 +454,7 @@ article_card_descriptions_cb (GObject *source,
       return;
     }
 
-  g_auto(GStrv) shards_strv = strv_from_string_list (shards);
+  g_auto(GStrv) shards_strv = strv_from_shard_list (shards);
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
@@ -749,7 +755,7 @@ recent_news_articles_cb (GObject *source,
       return;
     }
 
-  g_auto(GStrv) shards_strv = strv_from_string_list (shards);
+  g_auto(GStrv) shards_strv = strv_from_shard_list (shards);
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
@@ -847,7 +853,7 @@ relevant_video_cb (GObject *source,
       return;
     }
 
-  g_auto(GStrv) shards_strv = strv_from_string_list (shards);
+  g_auto(GStrv) shards_strv = strv_from_shard_list (shards);
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
