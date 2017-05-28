@@ -514,7 +514,7 @@ article_card_descriptions_cb (GObject *source,
       g_variant_builder_close (&builder);
     }
 
-  eks_discovery_feed_content_complete_article_card_descriptions (EKS_DISCOVERY_FEED_CONTENT (source),
+  eks_discovery_feed_content_complete_article_card_descriptions (state->provider->content_skeleton,
                                                                  state->invocation,
                                                                  (const gchar * const *) shards_strv,
                                                                  g_variant_builder_end (&builder));
@@ -602,7 +602,7 @@ get_word_of_the_day_content_cb (GObject *source,
   add_key_value_pair_from_model_to_variant (model, &builder, "type");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
-  eks_discovery_feed_word_complete_get_word_of_the_day (EKS_DISCOVERY_FEED_WORD (source),
+  eks_discovery_feed_word_complete_get_word_of_the_day (state->provider->word_skeleton,
                                                         state->invocation,
                                                         g_variant_builder_end (&builder));
   g_slist_free_full (models, g_object_unref);
@@ -681,7 +681,7 @@ get_quote_of_the_day_content_cb (GObject *source,
   add_key_value_pair_from_model_to_variant (model, &builder, "author");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
-  eks_discovery_feed_quote_complete_get_quote_of_the_day (EKS_DISCOVERY_FEED_QUOTE (source),
+  eks_discovery_feed_quote_complete_get_quote_of_the_day (state->provider->quote_skeleton,
                                                           state->invocation,
                                                           g_variant_builder_end (&builder));
   g_slist_free_full (models, g_object_unref);
@@ -775,7 +775,7 @@ recent_news_articles_cb (GObject *source,
       /* Stop building object */
       g_variant_builder_close (&builder);
     }
-  eks_discovery_feed_news_complete_get_recent_news (EKS_DISCOVERY_FEED_NEWS (source),
+  eks_discovery_feed_news_complete_get_recent_news (state->provider->news_skeleton,
                                                     state->invocation,
                                                     (const gchar * const *) shards_strv,
                                                     g_variant_builder_end (&builder));
@@ -875,7 +875,7 @@ relevant_video_cb (GObject *source,
       /* Stop building object */
       g_variant_builder_close (&builder);
     }
-  eks_discovery_feed_video_complete_get_videos (EKS_DISCOVERY_FEED_VIDEO (source),
+  eks_discovery_feed_video_complete_get_videos (state->provider->video_skeleton,
                                                 state->invocation,
                                                 (const gchar * const *) shards_strv,
                                                 g_variant_builder_end (&builder));
