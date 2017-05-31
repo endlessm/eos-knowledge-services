@@ -551,9 +551,9 @@ get_word_of_the_day_content_cb (GObject *source,
   gint index = get_day_of_year () % g_slist_length (models);
   EkncContentObjectModel *model = g_slist_nth (models, index)->data;
 
-  add_key_value_pair_from_model_to_variant (model, &builder, "title");
-  add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
-  add_key_value_pair_from_model_to_variant (model, &builder, "license");
+  add_key_value_pair_from_model_to_variant (model, &builder, "word");
+  add_key_value_pair_from_model_to_variant (model, &builder, "definition");
+  add_key_value_pair_from_model_to_variant (model, &builder, "type");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   g_dbus_method_invocation_return_value (state->invocation,
@@ -630,8 +630,8 @@ get_quote_of_the_day_content_cb (GObject *source,
   gint index = get_day_of_year () % g_slist_length (models);
   EkncContentObjectModel *model = g_slist_nth (models, index)->data;
 
-  add_key_value_pair_from_model_to_variant (model, &builder, "title");
-  add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
+  add_key_value_pair_from_model_to_variant (model, &builder, "quote");
+  add_key_value_pair_from_model_to_variant (model, &builder, "author");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   g_dbus_method_invocation_return_value (state->invocation,
