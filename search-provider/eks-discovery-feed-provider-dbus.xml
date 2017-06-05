@@ -39,4 +39,10 @@
       <arg type="aa{ss}" name="Results" direction="out" />
     </method>
   </interface>
+  <interface name="com.endlessm.DiscoveryFeedVideo">
+    <method name="GetVideos">
+      <arg type="as" name="Shards" direction="out" />
+      <arg type="aa{ss}" name="Results" direction="out" />
+    </method>
+  </interface>
 </node>
