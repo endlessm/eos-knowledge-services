@@ -12,6 +12,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#define MAX_KNOWLEDGE_APPS 5
+#define DAYS_IN_YEAR 365
+
 struct _EksDiscoveryFeedDatabaseContentProvider
 {
   GObject parent_instance;
@@ -338,6 +341,17 @@ get_day_of_year (void)
   return g_date_time_get_day_of_year (datetime);
 }
 
+static gboolean
+in_range (guint index, guint day, guint length)
+{
+  guint j;
+  for (j = 0; j < MAX_KNOWLEDGE_APPS; j++) {
+    if (index == (day + j) % length)
+      return TRUE;
+  }
+  return FALSE;
+}
+
 static gchar *
 select_string_from_variant_from_day (GVariant *variant)
 {
@@ -432,6 +446,10 @@ article_card_descriptions_cb (GObject *source,
 {
   EkncEngine *engine = EKNC_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
+  guint index;
+  guint length;
+  guint day;
+  guint count;
 
   g_application_release (g_application_get_default ());
 
@@ -458,10 +476,20 @@ article_card_descriptions_cb (GObject *source,
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
+
+  length = g_slist_length (models);
+  day = get_day_of_year ();
+  index = 0;
+  count = 0;
+
   for (GSList *l = models; l; l = l->next)
     {
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
+
+      index += 1;
+      if (! in_range (index, day, length))
+        continue;
 
       EkncContentObjectModel *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
@@ -512,6 +540,10 @@ article_card_descriptions_cb (GObject *source,
 
       /* Stop building object */
       g_variant_builder_close (&builder);
+
+      count += 1;
+      if (count == MAX_KNOWLEDGE_APPS)
+        break;
     }
 
   eks_discovery_feed_content_complete_article_card_descriptions (state->provider->content_skeleton,
@@ -550,7 +582,7 @@ handle_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
                                                      "tags-match-all", tags_match_all,
-                                                     "limit", 5,
+                                                     "limit", DAYS_IN_YEAR,
                                                      "app-id", self->application_id,
                                                      NULL);
 
@@ -630,7 +662,7 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
-                                                     "limit", 365,
+                                                     "limit", DAYS_IN_YEAR,
                                                      "app-id", self->application_id,
                                                      NULL);
 
@@ -709,7 +741,7 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
-                                                     "limit", 365,
+                                                     "limit", DAYS_IN_YEAR,
                                                      "app-id", self->application_id,
                                                      NULL);
 
