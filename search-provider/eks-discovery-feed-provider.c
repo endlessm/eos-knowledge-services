@@ -807,7 +807,7 @@ handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                                                      "tags-match-any", tags_match_any,
                                                      "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                      "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
-                                                     "limit", 5,
+                                                     "limit", 1,
                                                      "app-id", self->application_id,
                                                      NULL);
 
