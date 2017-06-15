@@ -1,8 +1,8 @@
 {
     "app-id": "com.endlessm.EknServices",
-    "runtime": "com.endlessm.Platform",
-    "runtime-version": "@BRANCH@",
-    "sdk": "com.endlessm.Sdk",
+    "runtime": "com.endlessm.apps.Platform",
+    "runtime-version": "1",
+    "sdk": "com.endlessm.apps.Sdk",
     "finish-args": [
         "--filesystem=/var/lib/flatpak:ro",
         "--filesystem=/var/endless-extra/flatpak:ro",
