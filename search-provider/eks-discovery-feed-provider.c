@@ -327,6 +327,23 @@ add_key_value_int_to_str_pair_from_model_to_variant (EkncContentObjectModel *mod
   add_key_value_pair_to_variant (builder, underscore_key, str_value);
 }
 
+static void
+add_author_from_model_to_variant (EkncContentObjectModel *model,
+                                  GVariantBuilder        *builder,
+                                  const char             *key)
+{
+  g_autoptr(GVariant) authors;
+  g_object_get (model, "authors", &authors, NULL);
+
+  if (authors)
+    {
+      g_autoptr(GVariant) author = g_variant_get_child_value (authors, 0);
+      add_key_value_pair_to_variant (builder, key, g_variant_dup_string (author, NULL));
+    }
+  else
+    add_key_value_pair_to_variant (builder, key, "");
+}
+
 static gint
 get_day_of_week (void)
 {
@@ -710,7 +727,7 @@ get_quote_of_the_day_content_cb (GObject *source,
   EkncContentObjectModel *model = g_slist_nth (models, index)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "quote");
-  add_key_value_pair_from_model_to_variant (model, &builder, "author");
+  add_author_from_model_to_variant (model, &builder, "author");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   eks_discovery_feed_quote_complete_get_quote_of_the_day (state->provider->quote_skeleton,
