@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MAX_KNOWLEDGE_APPS 5
+#define NUMBER_OF_ARTICLES 5
 #define DAYS_IN_YEAR 365
 
 struct _EksDiscoveryFeedDatabaseContentProvider
@@ -345,7 +345,7 @@ static gboolean
 in_range (guint index, guint day, guint length)
 {
   guint j;
-  for (j = 0; j < MAX_KNOWLEDGE_APPS; j++) {
+  for (j = 0; j < NUMBER_OF_ARTICLES; j++) {
     if (index == (day + j) % length)
       return TRUE;
   }
@@ -542,7 +542,7 @@ article_card_descriptions_cb (GObject *source,
       g_variant_builder_close (&builder);
 
       count += 1;
-      if (count == MAX_KNOWLEDGE_APPS)
+      if (count == NUMBER_OF_ARTICLES)
         break;
     }
 
@@ -839,7 +839,7 @@ handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                                                      "tags-match-any", tags_match_any,
                                                      "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                      "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
-                                                     "limit", 1,
+                                                     "limit", NUMBER_OF_ARTICLES,
                                                      "app-id", self->application_id,
                                                      NULL);
 
@@ -940,7 +940,7 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                                                      "tags-match-any", tags_match_any,
                                                      "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                      "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
-                                                     "limit", 1,
+                                                     "limit", NUMBER_OF_ARTICLES,
                                                      "app-id", self->application_id,
                                                      NULL);
 
