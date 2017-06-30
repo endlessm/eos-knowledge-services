@@ -631,7 +631,7 @@ get_word_of_the_day_content_cb (GObject *source,
 
   add_key_value_pair_from_model_to_variant (model, &builder, "word");
   add_key_value_pair_from_model_to_variant (model, &builder, "definition");
-  add_key_value_pair_from_model_to_variant (model, &builder, "type");
+  add_key_value_pair_from_model_to_variant (model, &builder, "part-of-speech");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   eks_discovery_feed_word_complete_get_word_of_the_day (state->provider->word_skeleton,
