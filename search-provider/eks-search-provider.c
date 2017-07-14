@@ -211,11 +211,17 @@ do_search (EksSearchProvider *self,
 
   g_application_hold (g_application_get_default ());
 
+  GVariantBuilder tags_match_any_builder;
+  g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
+  g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
+  GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+
   self->cancellable = g_cancellable_new ();
   g_autoptr(EkncQueryObject) query_obj = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                         "query", query,
                                                         "limit", RESULTS_LIMIT,
                                                         "app-id", self->application_id,
+                                                        "tags-match-any", tags_match_any,
                                                         NULL);
   SearchState *state = g_slice_new0 (SearchState);
   state->self = self;
