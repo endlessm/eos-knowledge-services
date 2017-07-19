@@ -163,7 +163,8 @@ subtree_object_info_for_interface (EksSearchApp      *self,
            g_strcmp0 (interface, "com.endlessm.DiscoveryFeedQuote") == 0 ||
            g_strcmp0 (interface, "com.endlessm.DiscoveryFeedWord") == 0 ||
            g_strcmp0 (interface, "com.endlessm.DiscoveryFeedNews") == 0 ||
-           g_strcmp0 (interface, "com.endlessm.DiscoveryFeedVideo") == 0)
+           g_strcmp0 (interface, "com.endlessm.DiscoveryFeedVideo") == 0 ||
+           g_strcmp0 (interface, "com.endlessm.DiscoveryFeedArtwork") == 0)
     {
       info->create_type = EKS_TYPE_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER;
       info->cache = self->discovery_feed_content_providers;
@@ -204,6 +205,7 @@ eks_search_app_node_interface_infos ()
   g_ptr_array_add (ptr_array, eks_discovery_feed_word_interface_info ());
   g_ptr_array_add (ptr_array, eks_discovery_feed_news_interface_info ());
   g_ptr_array_add (ptr_array, eks_discovery_feed_video_interface_info ());
+  g_ptr_array_add (ptr_array, eks_discovery_feed_artwork_interface_info ());
   return ptr_array;
 }
 
