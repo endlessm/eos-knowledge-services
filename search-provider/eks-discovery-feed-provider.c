@@ -483,13 +483,44 @@ strv_from_shard_list (GSList *string_list)
   return strv;
 }
 
+typedef void (*ArticleCardDescriptionsCompletionHandler) (gpointer skeleton,
+                                                          GDBusMethodInvocation *invocation,
+                                                          const gchar * const *shards,
+                                                          GVariant *descriptions);
+
+typedef struct _DiscoveryFeedArticleCardQueryState {
+    DiscoveryFeedQueryState *query_state;
+    gpointer skeleton;
+    ArticleCardDescriptionsCompletionHandler completion_handler;
+} DiscoveryFeedArticleCardQueryState;
+
+static DiscoveryFeedArticleCardQueryState *
+discovery_feed_article_card_query_state_new (GDBusMethodInvocation *invocation,
+                                             EksDiscoveryFeedDatabaseContentProvider *provider,
+                                             gpointer skeleton,
+                                             ArticleCardDescriptionsCompletionHandler completion_handler)
+{
+    DiscoveryFeedArticleCardQueryState *state = g_slice_new0 (DiscoveryFeedArticleCardQueryState);
+    state->query_state = discovery_feed_query_state_new (invocation, provider);
+    state->skeleton = skeleton;
+    state->completion_handler = completion_handler;
+    return state;
+}
+
+void
+discovery_feed_article_card_query_state_free (DiscoveryFeedArticleCardQueryState *state)
+{
+    discovery_feed_query_state_free (state->query_state);
+    g_slice_free (DiscoveryFeedArticleCardQueryState, state);
+}
+
 static void
-artwork_article_card_descriptions_cb (GObject *source,
+_common_article_card_descriptions_cb (GObject *source,
                                       GAsyncResult *result,
                                       gpointer user_data)
 {
   EkncEngine *engine = EKNC_ENGINE (source);
-  DiscoveryFeedQueryState *state = user_data;
+  DiscoveryFeedArticleCardQueryState *state = user_data;
   guint index;
   guint length;
   guint day;
@@ -502,14 +533,14 @@ artwork_article_card_descriptions_cb (GObject *source,
   GSList *shards = NULL;
 
   if (!models_and_shards_for_result (engine,
-                                     state->provider->application_id,
+                                     state->query_state->provider->application_id,
                                      result,
                                      &models,
                                      &shards,
                                      &error))
     {
-      g_dbus_method_invocation_take_error (state->invocation, error);
-      discovery_feed_query_state_free (state);
+      g_dbus_method_invocation_take_error (state->query_state->invocation, error);
+      discovery_feed_article_card_query_state_free (state);
 
       /* No need to free_full the out models and shards here,
        * g_slist_copy_deep is not called if this function returns FALSE. */
@@ -590,13 +621,61 @@ artwork_article_card_descriptions_cb (GObject *source,
         break;
     }
 
-  eks_discovery_feed_artwork_complete_article_card_descriptions (state->provider->artwork_skeleton,
-                                                                 state->invocation,
-                                                                 (const gchar * const *) shards_strv,
-                                                                 g_variant_builder_end (&builder));
+  (*state->completion_handler) (state->skeleton,
+                                state->query_state->invocation,
+                                (const gchar * const *) shards_strv,
+                                g_variant_builder_end (&builder));
   g_slist_free_full (models, g_object_unref);
   g_slist_free_full (shards, g_object_unref);
-  discovery_feed_query_state_free (state);
+  discovery_feed_article_card_query_state_free (state);
+}
+
+static gboolean
+handle_common_article_card_descriptions (gpointer                                 *skeleton,
+                                         GDBusMethodInvocation                    *invocation,
+                                         ArticleCardDescriptionsCompletionHandler completion_handler,
+                                         gpointer                                 user_data)
+{
+    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+
+    if (!ensure_content_app_proxy (self))
+      return TRUE;
+
+    EkncEngine *engine = eknc_engine_get_default ();
+
+    /* Build up tags_match_any */
+    GVariantBuilder tags_match_any_builder;
+    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
+    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
+    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+
+    GVariantBuilder tags_match_all_builder;
+    g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
+    g_variant_builder_add (&tags_match_all_builder, "s", "EknHasDiscoveryFeedTitle");
+    GVariant *tags_match_all = g_variant_builder_end (&tags_match_all_builder);
+
+    /* Create query and run it */
+    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                     "tags-match-any", tags_match_any,
+                                                     "tags-match-all", tags_match_all,
+                                                     "limit", DAYS_IN_YEAR,
+                                                     "app-id", self->application_id,
+                                                     NULL);
+
+    /* Hold the application so that it doesn't go away whilst we're handling
+     * the query */
+    g_application_hold (g_application_get_default ());
+
+    eknc_engine_query (engine,
+                       query,
+                       self->cancellable,
+                       _common_article_card_descriptions_cb,
+                       discovery_feed_article_card_query_state_new (invocation,
+                                                                    self,
+                                                                    skeleton,
+                                                                    completion_handler));
+
+    return TRUE;
 }
 
 static gboolean
@@ -604,159 +683,11 @@ handle_artwork_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
                                           GDBusMethodInvocation                  *invocation,
                                           gpointer                                user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
-
-    if (!ensure_content_app_proxy (self))
-      return TRUE;
-
-    EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
-
-    GVariantBuilder tags_match_all_builder;
-    g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_all_builder, "s", "EknHasDiscoveryFeedTitle");
-    GVariant *tags_match_all = g_variant_builder_end (&tags_match_all_builder);
-
-    /* Create query and run it */
-    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
-                                                     "tags-match-all", tags_match_all,
-                                                     "limit", DAYS_IN_YEAR,
-                                                     "app-id", self->application_id,
-                                                     NULL);
-
-    /* Hold the application so that it doesn't go away whilst we're handling
-     * the query */
-    g_application_hold (g_application_get_default ());
-
-    eknc_engine_query (engine,
-                       query,
-                       self->cancellable,
-                       artwork_article_card_descriptions_cb,
-                       discovery_feed_query_state_new (invocation, self));
-
-    return TRUE;
-}
-
-static void
-content_article_card_descriptions_cb (GObject *source,
-                                      GAsyncResult *result,
-                                      gpointer user_data)
-{
-  EkncEngine *engine = EKNC_ENGINE (source);
-  DiscoveryFeedQueryState *state = user_data;
-  guint index;
-  guint length;
-  guint day;
-  guint count;
-
-  g_application_release (g_application_get_default ());
-
-  GError *error = NULL;
-  GSList *models = NULL;
-  GSList *shards = NULL;
-
-  if (!models_and_shards_for_result (engine,
-                                     state->provider->application_id,
-                                     result,
-                                     &models,
-                                     &shards,
-                                     &error))
-    {
-      g_dbus_method_invocation_take_error (state->invocation, error);
-      discovery_feed_query_state_free (state);
-
-      /* No need to free_full the out models and shards here,
-       * g_slist_copy_deep is not called if this function returns FALSE. */
-      return;
-    }
-
-  g_auto(GStrv) shards_strv = strv_from_shard_list (shards);
-
-  GVariantBuilder builder;
-  g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
-
-  length = g_slist_length (models);
-  day = get_day_of_year ();
-  index = 0;
-  count = 0;
-
-  for (GSList *l = models; l; l = l->next)
-    {
-      /* Start building up object */
-      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
-      index += 1;
-      if (! in_range (index, day, length))
-        continue;
-
-      EkncContentObjectModel *model = l->data;
-      DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
-
-      /* Examine the discovery-feed-content object first and set flags
-       * for things that we've overridden */
-      g_autoptr(GVariant) discovery_feed_content_variant;
-      g_object_get (model,
-                    "discovery-feed-content",
-                    &discovery_feed_content_variant,
-                    NULL);
-
-      if (discovery_feed_content_variant)
-        {
-          GVariantIter discovery_feed_content_iter;
-          g_variant_iter_init (&discovery_feed_content_iter,
-                               discovery_feed_content_variant);
-
-          gchar *key;
-          GVariant *value;
-
-          while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
-            {
-              if (g_strcmp0 (key, "blurbs") == 0)
-                {
-                  g_autofree gchar *title = select_string_from_variant_from_day (value);
-
-                  if (title)
-                    {
-                      add_key_value_pair_to_variant (&builder, "title", title);
-                      add_key_value_pair_to_variant (&builder, "synopsis", "");
-                      flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
-                    }
-                }
-            }
-        }
-
-      /* Add key-value pairs based on things we haven't addded yet */
-      if (!(flags & DISCOVERY_FEED_SET_CUSTOM_TITLE))
-        {
-          add_key_value_pair_from_model_to_variant (model, &builder, "title");
-          add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
-        }
-
-      add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
-      add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
-      add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
-
-      /* Stop building object */
-      g_variant_builder_close (&builder);
-
-      count += 1;
-      if (count == NUMBER_OF_ARTICLES)
-        break;
-    }
-
-  eks_discovery_feed_content_complete_article_card_descriptions (state->provider->content_skeleton,
-                                                                 state->invocation,
-                                                                 (const gchar * const *) shards_strv,
-                                                                 g_variant_builder_end (&builder));
-  g_slist_free_full (models, g_object_unref);
-  g_slist_free_full (shards, g_object_unref);
-  discovery_feed_query_state_free (state);
+    ArticleCardDescriptionsCompletionHandler handler = (ArticleCardDescriptionsCompletionHandler) eks_discovery_feed_artwork_complete_article_card_descriptions;
+    return handle_common_article_card_descriptions ((gpointer) skeleton,
+                                                    invocation,
+                                                    handler,
+                                                    user_data);
 }
 
 static gboolean
@@ -764,43 +695,11 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
                                           GDBusMethodInvocation                  *invocation,
                                           gpointer                                user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
-
-    if (!ensure_content_app_proxy (self))
-      return TRUE;
-
-    EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
-
-    GVariantBuilder tags_match_all_builder;
-    g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_all_builder, "s", "EknHasDiscoveryFeedTitle");
-    GVariant *tags_match_all = g_variant_builder_end (&tags_match_all_builder);
-
-    /* Create query and run it */
-    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
-                                                     "tags-match-all", tags_match_all,
-                                                     "limit", DAYS_IN_YEAR,
-                                                     "app-id", self->application_id,
-                                                     NULL);
-
-    /* Hold the application so that it doesn't go away whilst we're handling
-     * the query */
-    g_application_hold (g_application_get_default ());
-
-    eknc_engine_query (engine,
-                       query,
-                       self->cancellable,
-                       content_article_card_descriptions_cb,
-                       discovery_feed_query_state_new (invocation, self));
-
-    return TRUE;
+    ArticleCardDescriptionsCompletionHandler handler = (ArticleCardDescriptionsCompletionHandler) eks_discovery_feed_content_complete_article_card_descriptions;
+    return handle_common_article_card_descriptions ((gpointer) skeleton,
+                                                    invocation,
+                                                    handler,
+                                                    user_data);
 }
 
 
