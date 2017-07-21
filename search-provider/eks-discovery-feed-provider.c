@@ -559,12 +559,12 @@ _common_article_card_descriptions_cb (GObject *source,
 
   for (GSList *l = models; l; l = l->next)
     {
-      /* Start building up object */
-      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
       index += 1;
       if (! in_range (index, day, length))
         continue;
+
+      /* Start building up object */
+      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
       EkncContentObjectModel *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
