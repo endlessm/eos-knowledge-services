@@ -581,6 +581,7 @@ artwork_article_card_descriptions_cb (GObject *source,
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
+      add_author_from_model_to_variant (model, &builder, "author");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
