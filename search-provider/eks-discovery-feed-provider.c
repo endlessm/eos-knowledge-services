@@ -627,6 +627,8 @@ handle_artwork_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
                                                      "tags-match-all", tags_match_all,
+                                                     "sort", EKNC_QUERY_OBJECT_SORT_DATE,
+                                                     "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                      "limit", DAYS_IN_YEAR,
                                                      "app-id", self->application_id,
                                                      NULL);
