@@ -484,9 +484,9 @@ strv_from_shard_list (GSList *string_list)
 }
 
 static void
-artwork_article_card_descriptions_cb (GObject *source,
-                                      GAsyncResult *result,
-                                      gpointer user_data)
+artwork_card_descriptions_cb (GObject *source,
+                              GAsyncResult *result,
+                              gpointer user_data)
 {
   EkncEngine *engine = EKNC_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
@@ -591,7 +591,7 @@ artwork_article_card_descriptions_cb (GObject *source,
         break;
     }
 
-  eks_discovery_feed_artwork_complete_article_card_descriptions (state->provider->artwork_skeleton,
+  eks_discovery_feed_artwork_complete_artwork_card_descriptions (state->provider->artwork_skeleton,
                                                                  state->invocation,
                                                                  (const gchar * const *) shards_strv,
                                                                  g_variant_builder_end (&builder));
@@ -601,9 +601,9 @@ artwork_article_card_descriptions_cb (GObject *source,
 }
 
 static gboolean
-handle_artwork_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skeleton,
-                                          GDBusMethodInvocation                  *invocation,
-                                          gpointer                                user_data)
+handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skeleton,
+                                  GDBusMethodInvocation                  *invocation,
+                                  gpointer                                user_data)
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
 
@@ -640,7 +640,7 @@ handle_artwork_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
     eknc_engine_query (engine,
                        query,
                        self->cancellable,
-                       artwork_article_card_descriptions_cb,
+                       artwork_card_descriptions_cb,
                        discovery_feed_query_state_new (invocation, self));
 
     return TRUE;
@@ -1218,6 +1218,6 @@ eks_discovery_feed_database_content_provider_init (EksDiscoveryFeedDatabaseConte
                     G_CALLBACK (handle_get_videos), self);
 
   self->artwork_skeleton = eks_discovery_feed_artwork_skeleton_new ();
-  g_signal_connect (self->artwork_skeleton, "handle-article-card-descriptions",
-                    G_CALLBACK (handle_artwork_article_card_descriptions), self);
+  g_signal_connect (self->artwork_skeleton, "handle-artwork-card-descriptions",
+                    G_CALLBACK (handle_artwork_card_descriptions), self);
 }
