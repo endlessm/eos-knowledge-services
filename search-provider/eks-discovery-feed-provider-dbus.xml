@@ -24,7 +24,7 @@
     </method>
   </interface>
   <interface name="com.endlessm.DiscoveryFeedArtwork">
-    <method name="ArticleCardDescriptions">
+    <method name="ArtworkCardDescriptions">
       <arg type="as" name="Shards" direction="out" />
       <arg type="aa{ss}" name="Results" direction="out" />
     </method>
