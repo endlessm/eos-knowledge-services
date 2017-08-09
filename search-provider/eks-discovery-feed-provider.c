@@ -720,7 +720,7 @@ content_article_card_descriptions_cb (GObject *source,
 
           while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
             {
-              if (g_strcmp0 (key, "blurbs") == 0)
+              if (g_strcmp0 (key, "hookTitle") == 0)
                 {
                   g_autofree gchar *title = select_string_from_variant_from_day (value);
 
