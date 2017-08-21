@@ -621,15 +621,9 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
     GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
-    GVariantBuilder tags_match_all_builder;
-    g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_all_builder, "s", "EknHasDiscoveryFeedTitle");
-    GVariant *tags_match_all = g_variant_builder_end (&tags_match_all_builder);
-
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
-                                                     "tags-match-all", tags_match_all,
                                                      "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                      "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                      "limit", DAYS_IN_YEAR,
