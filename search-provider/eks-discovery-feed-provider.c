@@ -400,6 +400,9 @@ static gchar *
 select_string_from_variant_from_day (GVariant *variant)
 {
   gsize size = g_variant_n_children (variant);
+  if (size == 0)
+    return NULL;
+
   gint index = get_day_of_week () % size;
   /* We need to unwrap the variant and then the inner string first */
   g_autoptr(GVariant) child_variant = g_variant_get_child_value (variant, index);
