@@ -378,22 +378,13 @@ get_day_of_week (void)
   return g_date_time_get_day_of_week (datetime);
 }
 
+#define WRAPAROUND_CONSTANT 70
+
 static gint
-get_day_of_year (void)
+get_day_of_year_wrapped (void)
 {
   g_autoptr(GDateTime) datetime = g_date_time_new_now_local ();
-  return g_date_time_get_day_of_year (datetime);
-}
-
-static gboolean
-in_range (guint index, guint day, guint length)
-{
-  guint j;
-  for (j = 0; j < NUMBER_OF_ARTICLES; j++) {
-    if (index == (day + j) % length)
-      return TRUE;
-  }
-  return FALSE;
+  return g_date_time_get_day_of_year (datetime) % WRAPAROUND_CONSTANT;
 }
 
 static gchar *
@@ -493,10 +484,6 @@ artwork_card_descriptions_cb (GObject *source,
 {
   EkncEngine *engine = EKNC_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
-  guint index;
-  guint length;
-  guint day;
-  guint count;
 
   g_application_release (g_application_get_default ());
 
@@ -524,17 +511,8 @@ artwork_card_descriptions_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
 
-  length = g_slist_length (models);
-  day = get_day_of_year ();
-  index = 0;
-  count = 0;
-
   for (GSList *l = models; l; l = l->next)
     {
-      index += 1;
-      if (! in_range (index, day, length))
-        continue;
-
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
@@ -588,10 +566,6 @@ artwork_card_descriptions_cb (GObject *source,
 
       /* Stop building object */
       g_variant_builder_close (&builder);
-
-      count += 1;
-      if (count == NUMBER_OF_ARTICLES)
-        break;
     }
 
   eks_discovery_feed_artwork_complete_artwork_card_descriptions (state->provider->artwork_skeleton,
@@ -626,7 +600,8 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
                                                      "tags-match-any", tags_match_any,
                                                      "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                      "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
-                                                     "limit", DAYS_IN_YEAR,
+                                                     "limit", NUMBER_OF_ARTICLES,
+                                                     "offset", get_day_of_year_wrapped (),
                                                      "app-id", self->application_id,
                                                      NULL);
 
@@ -650,10 +625,6 @@ content_article_card_descriptions_cb (GObject *source,
 {
   EkncEngine *engine = EKNC_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
-  guint index;
-  guint length;
-  guint day;
-  guint count;
 
   g_application_release (g_application_get_default ());
 
@@ -681,17 +652,8 @@ content_article_card_descriptions_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
 
-  length = g_slist_length (models);
-  day = get_day_of_year ();
-  index = 0;
-  count = 0;
-
   for (GSList *l = models; l; l = l->next)
     {
-      index += 1;
-      if (! in_range (index, day, length))
-        continue;
-
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
@@ -744,10 +706,6 @@ content_article_card_descriptions_cb (GObject *source,
 
       /* Stop building object */
       g_variant_builder_close (&builder);
-
-      count += 1;
-      if (count == NUMBER_OF_ARTICLES)
-        break;
     }
 
   eks_discovery_feed_content_complete_article_card_descriptions (state->provider->content_skeleton,
@@ -786,7 +744,8 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
                                                      "tags-match-all", tags_match_all,
-                                                     "limit", DAYS_IN_YEAR,
+                                                     "limit", NUMBER_OF_ARTICLES,
+                                                     "offset", get_day_of_year_wrapped (),
                                                      "app-id", self->application_id,
                                                      NULL);
 
@@ -831,8 +790,7 @@ get_word_of_the_day_content_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-  gint index = get_day_of_year () % g_slist_length (models);
-  EkncContentObjectModel *model = g_slist_nth (models, index)->data;
+  EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "word");
   add_key_value_pair_from_model_to_variant (model, &builder, "definition");
@@ -867,7 +825,8 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
-                                                     "limit", DAYS_IN_YEAR,
+                                                     "limit", 1,
+                                                     "offset", get_day_of_year_wrapped (),
                                                      "app-id", self->application_id,
                                                      NULL);
 
@@ -911,8 +870,7 @@ get_quote_of_the_day_content_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-  gint index = get_day_of_year () % g_slist_length (models);
-  EkncContentObjectModel *model = g_slist_nth (models, index)->data;
+  EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "quote");
   add_author_from_model_to_variant (model, &builder, "author");
@@ -946,7 +904,8 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                      "tags-match-any", tags_match_any,
-                                                     "limit", DAYS_IN_YEAR,
+                                                     "limit", 1,
+                                                     "offset", get_day_of_year_wrapped (),
                                                      "app-id", self->application_id,
                                                      NULL);
 
