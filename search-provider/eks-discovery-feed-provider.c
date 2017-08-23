@@ -707,7 +707,7 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
 
-    if (!ensure_content_app_proxy (self))
+    if (!ensure_artwork_app_proxy (self))
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
