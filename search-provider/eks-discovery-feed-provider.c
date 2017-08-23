@@ -475,66 +475,6 @@ strv_from_shard_list (GSList *string_list)
   return strv;
 }
 
-/* Copy properties from source object to GValue
- * and char * array. Assumes that all properties
- * are readable. */
-static guint
-pspecs_to_param_array (GParamSpec **pspecs,
-                       GObject    *source,
-                       guint      n_pspecs,
-                       const gchar ***out_names,
-                       GValue      **out_values)
-{
-  const gchar **names = g_new0 (const gchar *, n_pspecs);
-  GValue *values = g_new0 (GValue, n_pspecs);
-  guint i = 0;
-
-  for (; i < n_pspecs; ++i)
-    {
-      names[i] = pspecs[i]->name;
-
-      g_value_init (&values[i], pspecs[i]->value_type);
-      g_object_get_property (source, names[i], &values[i]);
-    }
-
-  *out_names = names;
-  *out_values = values;
-
-  return n_pspecs;
-}
-
-/* Set the given property in the parameter array,
- * appending it if necessary. Returns the number of
- * parameters in the new arrays */
-static guint
-set_property_in_param_array (const gchar *name,
-                             const GValue *replacement,
-                             const gchar ***out_names,
-                             GValue **out_values,
-                             guint n_params)
-{
-  guint i = 0;
-
-  /* First search for the property and try to set it directly. */
-  for (; i < n_params; ++i)
-    {
-      if (g_strcmp0 ((*out_names)[i], name) == 0)
-        {
-          g_value_copy (replacement, &((*out_values)[i]));
-          return n_params;
-        }
-    }
-
-  /* Not found, append the property */
-  *out_names = g_renew (const gchar *, *out_names, n_params + 1);
-  *out_values = g_renew (GValue, *out_values, n_params + 1);
-
-  *out_names[n_params] = name;
-  g_value_copy (replacement, &((*out_values)[n_params])) ;
-
-  return n_params + 1;
-}
-
 typedef struct _QueryPendingUpperBound {
   EkncQueryObject     *query;
   guint               offset_within_upper_bound;
@@ -574,18 +514,6 @@ query_pending_upper_bound_free (QueryPendingUpperBound *data)
   g_free (data);
 }
 
-/* Free an array of GValue structures, making sure to clear each value */
-static void
-free_gvalue_array (GValue *values, guint n_values)
-{
-  guint i = 0;
-
-  for (; i < n_values; ++i)
-    g_value_unset (&values[i]);
-
-  g_free (values);
-}
-
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (QueryPendingUpperBound, query_pending_upper_bound_free)
 
 static void
@@ -594,21 +522,12 @@ on_received_upper_bound_result (GObject      *source,
                                 gpointer     user_data)
 {
   EkncEngine *engine = EKNC_ENGINE (source);
-  GError *error = NULL;
-  gint upper_bound;
-  gint intended_limit;
-  guint n_properties;
-  g_auto(GValue) offset_gvalue = G_VALUE_INIT;
-
-  /* Cannot use g_autofree with property_values as they must be cleared */
-  GValue *property_values = NULL;
-  g_autofree gchar  **property_names = NULL;
   g_autoptr(QueryPendingUpperBound) pending = user_data;
-  g_autoptr(EkncQueryResults) results = NULL;
-  g_autofree GParamSpec **copy_properties = g_object_class_list_properties (G_OBJECT_GET_CLASS (G_OBJECT (pending->query)),
-                                                                            &n_properties);
+  g_autoptr(GError) error = NULL;
 
-  if (!(results = eknc_engine_query_finish (engine, result, &error)))
+  g_autoptr(EkncQueryResults) results = eknc_engine_query_finish (engine, result, &error);
+
+  if (error != NULL)
     {
       g_warning ("Unable to get upper bound on results, aborting query: %s",
                  error->message);
@@ -617,34 +536,18 @@ on_received_upper_bound_result (GObject      *source,
 
   /* Now that we have results, we can read the upper bound and
    * determine the actual offset */
-  g_object_get (results, "upper-bound", &upper_bound, NULL);
+  guint intended_limit;
   g_object_get (pending->query, "limit", &intended_limit, NULL);
-
-  /* EkncQueryObject is immutable, so we have to create a new one
-   * and set construct properties again */
-  pspecs_to_param_array (copy_properties,
-                         G_OBJECT (pending->query),
-                         n_properties,
-                         (const gchar ***) &property_names,
-                         &property_values);
-
-  g_value_init (&offset_gvalue, G_TYPE_UINT);
-  g_value_set_uint (&offset_gvalue,
-                    pending->offset_within_upper_bound % (MIN(upper_bound,
-                                                              pending->wraparound_upper_bound) -
-                                                          intended_limit));
-  n_properties = set_property_in_param_array ("offset",
-                                              &offset_gvalue,
-                                              (const gchar ***) &property_names,
-                                              &property_values,
-                                              n_properties);
+  gint upper_bound = eknc_query_results_get_upper_bound (results);
+  guint offset = pending->offset_within_upper_bound % (MIN (upper_bound,
+                                                            pending->wraparound_upper_bound) -
+                                                       intended_limit);
 
   /* Get rid of the old query and construct a new one in its place */
-  g_clear_object (&pending->query);
-  pending->query = EKNC_QUERY_OBJECT (g_object_new_with_properties (EKNC_TYPE_QUERY_OBJECT,
-                                                                    n_properties,
-                                                                    (const gchar **) property_names,
-                                                                    property_values));
+  EkncQueryObject *query = eknc_query_object_new_from_object (pending->query,
+                                                              "offset", offset,
+                                                              NULL);
+  g_set_object (&pending->query, query);
 
   /* Okay, now fire off the *actual* query, passing the user data
    * and callback that we were going to pass the first time */
@@ -653,8 +556,6 @@ on_received_upper_bound_result (GObject      *source,
                      pending->cancellable,
                      pending->main_query_ready_callback,
                      pending->main_query_ready_data);
-
-  free_gvalue_array (property_values, n_properties);
 }
 
 /* This function executes the given query with an offset computed
@@ -667,7 +568,7 @@ on_received_upper_bound_result (GObject      *source,
  * that we may want to fetch the full window of articles specified
  * in the limit parameter to the query
  */
-static gboolean
+static void
 query_with_wraparound_offset (EkncEngine          *engine,
                               EkncQueryObject     *query,
                               guint               offset_within_upper_bound,
@@ -676,38 +577,13 @@ query_with_wraparound_offset (EkncEngine          *engine,
                               GAsyncReadyCallback main_query_ready_callback,
                               gpointer            main_query_ready_data)
 {
-  gint intended_limit;
-  guint n_properties;
-  g_auto(GValue) limit_gvalue = G_VALUE_INIT;
-
-  /* Cannot use g_autofree with property_values as they must be cleared */
-  GValue *property_values = NULL;
-  g_autofree gchar  **property_names = NULL;
-
-  g_autofree GParamSpec **copy_properties = g_object_class_list_properties (G_OBJECT_GET_CLASS (G_OBJECT (query)),
-                                                                            &n_properties);
-  pspecs_to_param_array (copy_properties,
-                         G_OBJECT (query),
-                         n_properties,
-                         (const gchar ***) &property_names,
-                         &property_values);
-
   /* Override the limit, setting it to one. In the returned query we'll get
    * nothing back, but Xapian will tell us how many models matched our query
    * which we'll use later. We have to ask for at least one article
    * here, otherwise we trigger assertions in knowledge-lib. */
-  g_value_init (&limit_gvalue, G_TYPE_UINT);
-  g_value_set_uint (&limit_gvalue, 1);
-  n_properties = set_property_in_param_array ("limit",
-                                              &limit_gvalue,
-                                              (const gchar ***) &property_names,
-                                              &property_values,
-                                              n_properties);
-
-  g_autoptr (EkncQueryObject) truncated_query = EKNC_QUERY_OBJECT (g_object_new_with_properties (EKNC_TYPE_QUERY_OBJECT,
-                                                                                                 n_properties,
-                                                                                                 (const gchar **) property_names,
-                                                                                                 property_values));
+  g_autoptr (EkncQueryObject) truncated_query = eknc_query_object_new_from_object (query,
+                                                                                   "limit", 1,
+                                                                                   NULL);
 
   /* Dispatch the query, when it comes back we'll know what to
    * set the offset to */
@@ -721,8 +597,6 @@ query_with_wraparound_offset (EkncEngine          *engine,
                                                     cancellable,
                                                     main_query_ready_callback,
                                                     main_query_ready_data));
-
-  free_gvalue_array (property_values, n_properties);
 }
 
 static void
