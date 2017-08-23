@@ -10,6 +10,7 @@
 #include <eos-shard/eos-shard-shard-file.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define NUMBER_OF_ARTICLES 5
@@ -385,17 +386,6 @@ get_day_of_year (void)
   return g_date_time_get_day_of_year (datetime);
 }
 
-static gboolean
-in_range (guint index, guint day, guint length)
-{
-  guint j;
-  for (j = 0; j < NUMBER_OF_ARTICLES; j++) {
-    if (index == (day + j) % length)
-      return TRUE;
-  }
-  return FALSE;
-}
-
 static gchar *
 select_string_from_variant_from_day (GVariant *variant)
 {
@@ -486,6 +476,130 @@ strv_from_shard_list (GSList *string_list)
   return strv;
 }
 
+typedef struct _QueryPendingUpperBound {
+  EkncQueryObject     *query;
+  guint               offset_within_upper_bound;
+  guint               wraparound_upper_bound;
+  GCancellable        *cancellable;
+  GAsyncReadyCallback main_query_ready_callback;
+  gpointer            main_query_ready_data;
+} QueryPendingUpperBound;
+
+static QueryPendingUpperBound *
+query_pending_upper_bound_new (EkncQueryObject     *query,
+                               guint               offset_within_upper_bound,
+                               guint               wraparound_upper_bound,
+                               GCancellable        *cancellable,
+                               GAsyncReadyCallback main_query_ready_callback,
+                               gpointer            main_query_ready_data)
+{
+  QueryPendingUpperBound *data = g_new0 (QueryPendingUpperBound, 1);
+  data->query = g_object_ref (query);
+  data->offset_within_upper_bound = offset_within_upper_bound;
+  data->wraparound_upper_bound = wraparound_upper_bound;
+
+  /* Keep cancellable alive if we got one, otherwise ignore it */
+  data->cancellable = cancellable ? g_object_ref (cancellable) : NULL;
+  data->main_query_ready_callback = main_query_ready_callback;
+  data->main_query_ready_data = main_query_ready_data;
+
+  return data;
+}
+
+static void
+query_pending_upper_bound_free (QueryPendingUpperBound *data)
+{
+  g_object_unref (data->query);
+  g_clear_object (&data->cancellable);
+
+  g_free (data);
+}
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (QueryPendingUpperBound, query_pending_upper_bound_free)
+
+static void
+on_received_upper_bound_result (GObject      *source,
+                                GAsyncResult *result,
+                                gpointer     user_data)
+{
+  EkncEngine *engine = EKNC_ENGINE (source);
+  g_autoptr(QueryPendingUpperBound) pending = user_data;
+  g_autoptr(GError) error = NULL;
+
+  g_autoptr(EkncQueryResults) results = eknc_engine_query_finish (engine, result, &error);
+
+  if (error != NULL)
+    {
+      g_warning ("Unable to get upper bound on results, aborting query: %s",
+                 error->message);
+      return;
+    }
+
+  /* Now that we have results, we can read the upper bound and
+   * determine the actual offset */
+  guint intended_limit;
+  g_object_get (pending->query, "limit", &intended_limit, NULL);
+  gint upper_bound = eknc_query_results_get_upper_bound (results);
+  guint offset = pending->offset_within_upper_bound % (MIN (upper_bound,
+                                                            pending->wraparound_upper_bound) -
+                                                       intended_limit);
+
+  /* Get rid of the old query and construct a new one in its place */
+  EkncQueryObject *query = eknc_query_object_new_from_object (pending->query,
+                                                              "offset", offset,
+                                                              NULL);
+  g_set_object (&pending->query, query);
+
+  /* Okay, now fire off the *actual* query, passing the user data
+   * and callback that we were going to pass the first time */
+  eknc_engine_query (engine,
+                     pending->query,
+                     pending->cancellable,
+                     pending->main_query_ready_callback,
+                     pending->main_query_ready_data);
+}
+
+/* This function executes the given query with an offset computed
+ * to be within the total number of results within the query set. The
+ * caller should pass an offset that it would intend to use if
+ * the query set had the number of results specified in
+ * wraparound_upper_bound. The true wraparound will them be computed
+ * with respect to maximum of either the number of articles in the
+ * result set or the wraparound_upper_bound, accounting for the fact
+ * that we may want to fetch the full window of articles specified
+ * in the limit parameter to the query
+ */
+static void
+query_with_wraparound_offset (EkncEngine          *engine,
+                              EkncQueryObject     *query,
+                              guint               offset_within_upper_bound,
+                              guint               wraparound_upper_bound,
+                              GCancellable        *cancellable,
+                              GAsyncReadyCallback main_query_ready_callback,
+                              gpointer            main_query_ready_data)
+{
+  /* Override the limit, setting it to one. In the returned query we'll get
+   * nothing back, but Xapian will tell us how many models matched our query
+   * which we'll use later. We have to ask for at least one article
+   * here, otherwise we trigger assertions in knowledge-lib. */
+  g_autoptr (EkncQueryObject) truncated_query = eknc_query_object_new_from_object (query,
+                                                                                   "limit", 1,
+                                                                                   NULL);
+
+  /* Dispatch the query, when it comes back we'll know what to
+   * set the offset to */
+  eknc_engine_query (engine,
+                     truncated_query,
+                     cancellable,
+                     on_received_upper_bound_result,
+                     query_pending_upper_bound_new (query,
+                                                    offset_within_upper_bound,
+                                                    wraparound_upper_bound,
+                                                    cancellable,
+                                                    main_query_ready_callback,
+                                                    main_query_ready_data));
+}
+
 static void
 artwork_card_descriptions_cb (GObject *source,
                               GAsyncResult *result,
@@ -493,10 +607,6 @@ artwork_card_descriptions_cb (GObject *source,
 {
   EkncEngine *engine = EKNC_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
-  guint index;
-  guint length;
-  guint day;
-  guint count;
 
   g_application_release (g_application_get_default ());
 
@@ -524,17 +634,8 @@ artwork_card_descriptions_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
 
-  length = g_slist_length (models);
-  day = get_day_of_year ();
-  index = 0;
-  count = 0;
-
   for (GSList *l = models; l; l = l->next)
     {
-      index += 1;
-      if (! in_range (index, day, length))
-        continue;
-
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
@@ -588,10 +689,6 @@ artwork_card_descriptions_cb (GObject *source,
 
       /* Stop building object */
       g_variant_builder_close (&builder);
-
-      count += 1;
-      if (count == NUMBER_OF_ARTICLES)
-        break;
     }
 
   eks_discovery_feed_artwork_complete_artwork_card_descriptions (state->provider->artwork_skeleton,
@@ -610,7 +707,7 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
 
-    if (!ensure_content_app_proxy (self))
+    if (!ensure_artwork_app_proxy (self))
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
@@ -621,24 +718,24 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
     GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
-    /* Create query and run it */
-    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
-                                                     "sort", EKNC_QUERY_OBJECT_SORT_DATE,
-                                                     "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
-                                                     "limit", DAYS_IN_YEAR,
-                                                     "app-id", self->application_id,
-                                                     NULL);
-
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
     g_application_hold (g_application_get_default ());
 
-    eknc_engine_query (engine,
-                       query,
-                       self->cancellable,
-                       artwork_card_descriptions_cb,
-                       discovery_feed_query_state_new (invocation, self));
+    /* Create query and run it */
+    query_with_wraparound_offset (engine,
+                                  g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                "tags-match-any", tags_match_any,
+                                                "sort", EKNC_QUERY_OBJECT_SORT_DATE,
+                                                "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
+                                                "limit", NUMBER_OF_ARTICLES,
+                                                "app-id", self->application_id,
+                                                NULL),
+                                  get_day_of_year (),
+                                  DAYS_IN_YEAR,
+                                  self->cancellable,
+                                  artwork_card_descriptions_cb,
+                                  discovery_feed_query_state_new (invocation, self));
 
     return TRUE;
 }
@@ -650,10 +747,6 @@ content_article_card_descriptions_cb (GObject *source,
 {
   EkncEngine *engine = EKNC_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
-  guint index;
-  guint length;
-  guint day;
-  guint count;
 
   g_application_release (g_application_get_default ());
 
@@ -681,17 +774,8 @@ content_article_card_descriptions_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
 
-  length = g_slist_length (models);
-  day = get_day_of_year ();
-  index = 0;
-  count = 0;
-
   for (GSList *l = models; l; l = l->next)
     {
-      index += 1;
-      if (! in_range (index, day, length))
-        continue;
-
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
@@ -744,10 +828,6 @@ content_article_card_descriptions_cb (GObject *source,
 
       /* Stop building object */
       g_variant_builder_close (&builder);
-
-      count += 1;
-      if (count == NUMBER_OF_ARTICLES)
-        break;
     }
 
   eks_discovery_feed_content_complete_article_card_descriptions (state->provider->content_skeleton,
@@ -780,25 +860,25 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
     GVariantBuilder tags_match_all_builder;
     g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_all_builder, "s", "EknHasDiscoveryFeedTitle");
-    GVariant *tags_match_all = g_variant_builder_end (&tags_match_all_builder);
-
-    /* Create query and run it */
-    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
-                                                     "tags-match-all", tags_match_all,
-                                                     "limit", DAYS_IN_YEAR,
-                                                     "app-id", self->application_id,
-                                                     NULL);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
     g_application_hold (g_application_get_default ());
 
-    eknc_engine_query (engine,
-                       query,
-                       self->cancellable,
-                       content_article_card_descriptions_cb,
-                       discovery_feed_query_state_new (invocation, self));
+    /* Create query and run it */
+    query_with_wraparound_offset (engine,
+                                  g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                "tags-match-any", tags_match_any,
+                                                "sort", EKNC_QUERY_OBJECT_SORT_DATE,
+                                                "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
+                                                "limit", NUMBER_OF_ARTICLES,
+                                                "app-id", self->application_id,
+                                                NULL),
+                                  get_day_of_year (),
+                                  DAYS_IN_YEAR,
+                                  self->cancellable,
+                                  content_article_card_descriptions_cb,
+                                  discovery_feed_query_state_new (invocation, self));
 
     return TRUE;
 }
@@ -831,8 +911,7 @@ get_word_of_the_day_content_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-  gint index = get_day_of_year () % g_slist_length (models);
-  EkncContentObjectModel *model = g_slist_nth (models, index)->data;
+  EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "word");
   add_key_value_pair_from_model_to_variant (model, &builder, "definition");
@@ -864,22 +943,22 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
     GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
-    /* Create query and run it */
-    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
-                                                     "limit", DAYS_IN_YEAR,
-                                                     "app-id", self->application_id,
-                                                     NULL);
-
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
     g_application_hold (g_application_get_default ());
 
-    eknc_engine_query (engine,
-                       query,
-                       self->cancellable,
-                       get_word_of_the_day_content_cb,
-                       discovery_feed_query_state_new (invocation, self));
+    /* Create query and run it */
+    query_with_wraparound_offset (engine,
+                                  g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                "tags-match-any", tags_match_any,
+                                                "limit", 1,
+                                                "app-id", self->application_id,
+                                                NULL),
+                                  get_day_of_year (),
+                                  DAYS_IN_YEAR,
+                                  self->cancellable,
+                                  get_word_of_the_day_content_cb,
+                                  discovery_feed_query_state_new (invocation, self));
 
     return TRUE;
 }
@@ -911,8 +990,7 @@ get_quote_of_the_day_content_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-  gint index = get_day_of_year () % g_slist_length (models);
-  EkncContentObjectModel *model = g_slist_nth (models, index)->data;
+  EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "title");
   add_author_from_model_to_variant (model, &builder, "author");
@@ -943,22 +1021,22 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
     GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
-    /* Create query and run it */
-    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
-                                                     "limit", DAYS_IN_YEAR,
-                                                     "app-id", self->application_id,
-                                                     NULL);
-
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
     g_application_hold (g_application_get_default ());
 
-    eknc_engine_query (engine,
-                       query,
-                       self->cancellable,
-                       get_quote_of_the_day_content_cb,
-                       discovery_feed_query_state_new (invocation, self));
+    /* Create query and run it */
+    query_with_wraparound_offset (engine,
+                                  g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                "tags-match-any", tags_match_any,
+                                                "limit", 1,
+                                                "app-id", self->application_id,
+                                                NULL),
+                                  get_day_of_year (),
+                                  DAYS_IN_YEAR,
+                                  self->cancellable,
+                                  get_quote_of_the_day_content_cb,
+                                  discovery_feed_query_state_new (invocation, self));
 
     return TRUE;
 }
