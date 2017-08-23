@@ -1118,7 +1118,7 @@ get_quote_of_the_day_content_cb (GObject *source,
 
   EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
 
-  add_key_value_pair_from_model_to_variant (model, &builder, "quote");
+  add_key_value_pair_from_model_to_variant (model, &builder, "title");
   add_author_from_model_to_variant (model, &builder, "author");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
