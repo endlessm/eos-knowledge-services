@@ -860,7 +860,6 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
     GVariantBuilder tags_match_all_builder;
     g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_all_builder, "s", "EknHasDiscoveryFeedTitle");
-    GVariant *tags_match_all = g_variant_builder_end (&tags_match_all_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
