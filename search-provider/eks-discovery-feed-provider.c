@@ -10,6 +10,7 @@
 #include <eos-shard/eos-shard-shard-file.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define NUMBER_OF_ARTICLES 5
