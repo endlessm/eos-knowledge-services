@@ -401,11 +401,6 @@ select_string_from_variant_from_day (GVariant *variant)
   return g_variant_dup_string (child_value, NULL);
 }
 
-typedef enum {
-  DISCOVERY_FEED_NO_CUSTOM_PROPS = 0,
-  DISCOVERY_FEED_SET_CUSTOM_TITLE = 1 << 0
-} DiscoveryFeedCustomProps;
-
 static gboolean
 models_for_result (EkncEngine   *engine,
                    const gchar  *application_id,
@@ -636,11 +631,10 @@ artwork_card_descriptions_cb (GObject *source,
 
   for (GSList *l = models; l; l = l->next)
     {
-      /* Start building up object */
-      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
       EkncContentObjectModel *model = l->data;
-      DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
+      g_autofree gchar *title = NULL;
+      gchar *key;
+      GVariant *value;
 
       /* Examine the discovery-feed-content object first and set flags
        * for things that we've overridden */
@@ -650,38 +644,30 @@ artwork_card_descriptions_cb (GObject *source,
                     &discovery_feed_content_variant,
                     NULL);
 
-      if (discovery_feed_content_variant)
+      if (!discovery_feed_content_variant)
+        continue;
+
+      GVariantIter discovery_feed_content_iter;
+      g_variant_iter_init (&discovery_feed_content_iter,
+                           discovery_feed_content_variant);
+
+      while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
         {
-          GVariantIter discovery_feed_content_iter;
-          g_variant_iter_init (&discovery_feed_content_iter,
-                               discovery_feed_content_variant);
-
-          gchar *key;
-          GVariant *value;
-
-          while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
+          if (g_strcmp0 (key, "blurbs") == 0)
             {
-              if (g_strcmp0 (key, "blurbs") == 0)
-                {
-                  g_autofree gchar *title = select_string_from_variant_from_day (value);
-
-                  if (title)
-                    {
-                      add_key_value_pair_to_variant (&builder, "title", title);
-                      add_key_value_pair_to_variant (&builder, "synopsis", "");
-                      flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
-                    }
-                }
+              title = select_string_from_variant_from_day (value);
+              break;
             }
         }
 
-      /* Add key-value pairs based on things we haven't addded yet */
-      if (!(flags & DISCOVERY_FEED_SET_CUSTOM_TITLE))
-        {
-          add_key_value_pair_from_model_to_variant (model, &builder, "title");
-          add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
-        }
+      if (!title)
+        continue;
 
+      /* Start building up object */
+      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
+
+      add_key_value_pair_to_variant (&builder, "title", title);
+      add_key_value_pair_to_variant (&builder, "synopsis", "");
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
@@ -776,11 +762,10 @@ content_article_card_descriptions_cb (GObject *source,
 
   for (GSList *l = models; l; l = l->next)
     {
-      /* Start building up object */
-      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
       EkncContentObjectModel *model = l->data;
-      DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
+      g_autofree gchar *title = NULL;
+      gchar *key;
+      GVariant *value;
 
       /* Examine the discovery-feed-content object first and set flags
        * for things that we've overridden */
@@ -790,38 +775,30 @@ content_article_card_descriptions_cb (GObject *source,
                     &discovery_feed_content_variant,
                     NULL);
 
-      if (discovery_feed_content_variant)
+      if (!discovery_feed_content_variant)
+        continue;
+
+      GVariantIter discovery_feed_content_iter;
+      g_variant_iter_init (&discovery_feed_content_iter,
+                           discovery_feed_content_variant);
+
+      while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
         {
-          GVariantIter discovery_feed_content_iter;
-          g_variant_iter_init (&discovery_feed_content_iter,
-                               discovery_feed_content_variant);
-
-          gchar *key;
-          GVariant *value;
-
-          while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
+          if (g_strcmp0 (key, "blurbs") == 0)
             {
-              if (g_strcmp0 (key, "blurbs") == 0)
-                {
-                  g_autofree gchar *title = select_string_from_variant_from_day (value);
-
-                  if (title)
-                    {
-                      add_key_value_pair_to_variant (&builder, "title", title);
-                      add_key_value_pair_to_variant (&builder, "synopsis", "");
-                      flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
-                    }
-                }
+              title = select_string_from_variant_from_day (value);
+              break;
             }
         }
 
-      /* Add key-value pairs based on things we haven't addded yet */
-      if (!(flags & DISCOVERY_FEED_SET_CUSTOM_TITLE))
-        {
-          add_key_value_pair_from_model_to_variant (model, &builder, "title");
-          add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
-        }
+      if (!title)
+        continue;
 
+      /* Start building up object */
+      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
+
+      add_key_value_pair_to_variant (&builder, "title", title);
+      add_key_value_pair_to_variant (&builder, "synopsis", "");
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
