@@ -8,6 +8,7 @@
         "--filesystem=/var/endless-extra/flatpak:ro",
         "--filesystem=~/.local/share/flatpak:ro",
         "--filesystem=~/.local/share",
+        "--filesystem=~/.var/app:ro",
         "--env=EKN_SUBSCRIPTIONS_DIR=.local/share/com.endlessm.subscriptions",
         "--share=network",
         "--socket=session-bus"
@@ -20,6 +21,15 @@
                     "type": "git",
                     "url": "https://c5a7fd3e12c1d7b20bbff48a541d36f92d1e5a2d@github.com/endlessm/eos-knowledge-services.git",
                     "branch": "@BRANCH@"
+                }
+            ]
+        },
+        {
+            "name": "xapian-bridge",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/endlessm/xapian-bridge.git"
                 }
             ]
         }
