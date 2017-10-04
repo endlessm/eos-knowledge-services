@@ -17,7 +17,7 @@ AC_INIT([Endless OS Knowledge Services], [1],
     [], [eos-knowledge-services], [http://endlessm.com])
 # Initialize Automake: enable all warnings and do not insist on GNU standards
 # no-portability suppresses warnings about syntax specific to GNU make
-AM_INIT_AUTOMAKE([-Wall -Wno-portability foreign 1.11 tar-ustar])
+AM_INIT_AUTOMAKE([-Wall -Wno-portability foreign 1.11 tar-ustar subdir-objects])
 # Avoid spewing garbage over the terminal ('make V=1' to see the garbage)
 AM_SILENT_RULES([yes])
 # Keep Autotools macros local to this source tree
