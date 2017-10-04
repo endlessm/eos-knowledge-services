@@ -22,17 +22,11 @@ struct _EksDiscoveryFeedDatabaseContentProvider
 
   gchar *application_id;
   EksDiscoveryFeedContent *content_skeleton;
-  EksDiscoveryFeedContent *content_app_proxy;
   EksDiscoveryFeedQuote *quote_skeleton;
-  EksDiscoveryFeedQuote *quote_app_proxy;
   EksDiscoveryFeedWord *word_skeleton;
-  EksDiscoveryFeedWord *word_app_proxy;
   EksDiscoveryFeedNews *news_skeleton;
-  EksDiscoveryFeedNews *news_app_proxy;
   EksDiscoveryFeedVideo *video_skeleton;
-  EksDiscoveryFeedVideo *video_app_proxy;
   EksDiscoveryFeedArtwork *artwork_skeleton;
-  EksDiscoveryFeedArtwork *artwork_app_proxy;
   GCancellable *cancellable;
 };
 
@@ -102,12 +96,6 @@ eks_discovery_feed_database_content_provider_finalize (GObject *object)
   g_clear_object (&self->word_skeleton);
   g_clear_object (&self->news_skeleton);
   g_clear_object (&self->video_skeleton);
-  g_clear_object (&self->content_app_proxy);
-  g_clear_object (&self->quote_app_proxy);
-  g_clear_object (&self->word_app_proxy);
-  g_clear_object (&self->news_app_proxy);
-  g_clear_object (&self->video_app_proxy);
-  g_clear_object (&self->artwork_app_proxy);
   g_clear_object (&self->cancellable);
 
   G_OBJECT_CLASS (eks_discovery_feed_database_content_provider_parent_class)->finalize (object);
@@ -137,149 +125,6 @@ object_path_from_app_id (const gchar *application_id)
   g_autoptr(GRegex) dot_regex = g_regex_new ("\\.", 0, 0, NULL);
   g_autofree gchar *replaced = g_regex_replace (dot_regex, application_id, -1, 0, "/", 0, NULL);
   return g_strconcat ("/", replaced, NULL);
-}
-
-static gboolean
-ensure_content_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
-{
-  if (self->content_app_proxy != NULL)
-    return TRUE;
-
-  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
-  g_autoptr(GError) error = NULL;
-  self->content_app_proxy = eks_discovery_feed_content_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                                               G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
-                                                                               G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
-                                                                               self->application_id,
-                                                                               object_path,
-                                                                               NULL,
-                                                                               &error);
-  if (error != NULL)
-    {
-      g_warning ("Error initializing dbus proxy: %s", error->message);
-      return FALSE;
-    }
-  return TRUE;
-}
-
-static gboolean
-ensure_quote_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
-{
-  if (self->quote_app_proxy != NULL)
-    return TRUE;
-
-  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
-  GError *error = NULL;
-  self->quote_app_proxy = eks_discovery_feed_quote_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
-                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
-                                                                           self->application_id,
-                                                                           object_path,
-                                                                           NULL,
-                                                                           &error);
-  if (error != NULL)
-    {
-      g_warning ("Error initializing dbus proxy: %s\n", error->message);
-      g_clear_error (&error);
-      return FALSE;
-    }
-  return TRUE;
-}
-
-static gboolean
-ensure_word_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
-{
-  if (self->word_app_proxy != NULL)
-    return TRUE;
-
-  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
-  GError *error = NULL;
-  self->word_app_proxy = eks_discovery_feed_word_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
-                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
-                                                                         self->application_id,
-                                                                         object_path,
-                                                                         NULL,
-                                                                         &error);
-  if (error != NULL)
-    {
-      g_warning ("Error initializing dbus proxy: %s\n", error->message);
-      g_clear_error (&error);
-      return FALSE;
-    }
-  return TRUE;
-}
-
-static gboolean
-ensure_news_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
-{
-  if (self->news_app_proxy != NULL)
-    return TRUE;
-
-  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
-  GError *error = NULL;
-  self->news_app_proxy = eks_discovery_feed_news_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
-                                                                         G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
-                                                                         self->application_id,
-                                                                         object_path,
-                                                                         NULL,
-                                                                         &error);
-  if (error != NULL)
-    {
-      g_warning ("Error initializing dbus proxy: %s", error->message);
-      g_clear_error (&error);
-      return FALSE;
-    }
-  return TRUE;
-}
-
-static gboolean
-ensure_video_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
-{
-  if (self->video_app_proxy != NULL)
-    return TRUE;
-
-  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
-  GError *error = NULL;
-  self->video_app_proxy = eks_discovery_feed_video_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
-                                                                           G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
-                                                                           self->application_id,
-                                                                           object_path,
-                                                                           NULL,
-                                                                           &error);
-  if (error != NULL)
-    {
-      g_warning ("Error initializing dbus proxy: %s", error->message);
-      g_clear_error (&error);
-      return FALSE;
-    }
-  return TRUE;
-}
-
-static gboolean
-ensure_artwork_app_proxy (EksDiscoveryFeedDatabaseContentProvider *self)
-{
-  if (self->artwork_app_proxy != NULL)
-    return TRUE;
-
-  g_autofree gchar *object_path = object_path_from_app_id (self->application_id);
-  GError *error = NULL;
-  self->artwork_app_proxy = eks_discovery_feed_artwork_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                                               G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION |
-                                                                               G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
-                                                                               self->application_id,
-                                                                               object_path,
-                                                                               NULL,
-                                                                               &error);
-  if (error != NULL)
-    {
-      g_warning ("Error initializing dbus proxy: %s", error->message);
-      g_clear_error (&error);
-      return FALSE;
-    }
-  return TRUE;
 }
 
 typedef struct {
@@ -706,10 +551,6 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
                                   gpointer                                user_data)
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
-
-    if (!ensure_artwork_app_proxy (self))
-      return TRUE;
-
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -845,10 +686,6 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
                                           gpointer                                user_data)
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
-
-    if (!ensure_content_app_proxy (self))
-      return TRUE;
-
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -931,10 +768,6 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                             gpointer                                 user_data)
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
-
-    if (!ensure_word_app_proxy (self))
-      return TRUE;
-
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -1009,10 +842,6 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                              gpointer                                 user_data)
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
-
-    if (!ensure_quote_app_proxy (self))
-      return TRUE;
-
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -1105,10 +934,6 @@ handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                         gpointer                                user_data)
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
-
-    if (!ensure_news_app_proxy (self))
-      return TRUE;
-
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -1205,10 +1030,6 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                    gpointer                                user_data)
 {
     EksDiscoveryFeedDatabaseContentProvider *self = user_data;
-
-    if (!ensure_video_app_proxy (self))
-      return TRUE;
-
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
