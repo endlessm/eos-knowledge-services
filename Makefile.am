@@ -9,6 +9,7 @@
 
 bin_PROGRAMS =
 CLEANFILES =
+MAINTAINERCLEANFILES = $(GITIGNORE_MAINTAINERCLEANFILES_TOPLEVEL)
 EXTRA_DIST =
 
 # # # SUBSTITUTED FILES # # #
@@ -102,3 +103,5 @@ eks_search_provider_v1_LDADD = \
 bin_PROGRAMS += \
 	eks-search-provider-v1 \
 	$(NULL)
+
+-include $(top_srcdir)/git.mk
