@@ -7,7 +7,7 @@ main (gint   argc,
       gchar *argv[])
 {
     g_autoptr(GApplication) app = g_object_new (EKS_TYPE_SEARCH_APP,
-                                                "application-id", "com.endlessm.EknServices.SearchProviderV1",
+                                                "application-id", "com.endlessm.EknServices2.SearchProviderV2",
                                                 "flags", G_APPLICATION_IS_SERVICE,
                                                 "inactivity-timeout", 12000,
                                                 NULL);

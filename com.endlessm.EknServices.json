@@ -1,7 +1,8 @@
 {
-    "app-id": "com.endlessm.EknServices",
+    "app-id": "com.endlessm.EknServices2",
+    "branch": "master",
     "runtime": "com.endlessm.apps.Platform",
-    "runtime-version": "1",
+    "runtime-version": "master",
     "sdk": "com.endlessm.apps.Sdk",
     "finish-args": [
         "--filesystem=/var/lib/flatpak:ro",
@@ -19,7 +20,7 @@
                 {
                     "type": "git",
                     "url": "https://c5a7fd3e12c1d7b20bbff48a541d36f92d1e5a2d@github.com/endlessm/eos-knowledge-services.git",
-                    "branch": "@BRANCH@"
+                    "branch": "master"
                 }
             ]
         }
