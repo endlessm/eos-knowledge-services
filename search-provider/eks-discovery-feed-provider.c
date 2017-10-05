@@ -16,7 +16,7 @@
 #define NUMBER_OF_ARTICLES 5
 #define DAYS_IN_YEAR 365
 
-struct _EksDiscoveryFeedDatabaseContentProvider
+struct _EksDiscoveryFeedProvider
 {
   GObject parent_instance;
 
@@ -30,13 +30,13 @@ struct _EksDiscoveryFeedDatabaseContentProvider
   GCancellable *cancellable;
 };
 
-static void eks_discovery_feed_database_content_provider_interface_init (EksProviderInterface *iface);
+static void eks_discovery_feed_provider_interface_init (EksProviderInterface *iface);
 
-G_DEFINE_TYPE_WITH_CODE (EksDiscoveryFeedDatabaseContentProvider,
-                         eks_discovery_feed_database_content_provider,
+G_DEFINE_TYPE_WITH_CODE (EksDiscoveryFeedProvider,
+                         eks_discovery_feed_provider,
                          G_TYPE_OBJECT,
                          G_IMPLEMENT_INTERFACE (EKS_TYPE_PROVIDER,
-                                                eks_discovery_feed_database_content_provider_interface_init))
+                                                eks_discovery_feed_provider_interface_init))
 
 enum {
   PROP_0,
@@ -44,15 +44,15 @@ enum {
   NPROPS
 };
 
-static GParamSpec *eks_discovery_feed_database_content_provider_props [NPROPS] = { NULL, };
+static GParamSpec *eks_discovery_feed_provider_props [NPROPS] = { NULL, };
 
 static void
-eks_discovery_feed_database_content_provider_get_property (GObject    *object,
-                                                           guint       prop_id,
-                                                           GValue     *value,
-                                                           GParamSpec *pspec)
+eks_discovery_feed_provider_get_property (GObject    *object,
+                                          unsigned    prop_id,
+                                          GValue     *value,
+                                          GParamSpec *pspec)
 {
-  EksDiscoveryFeedDatabaseContentProvider *self = EKS_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER (object);
+  EksDiscoveryFeedProvider *self = EKS_DISCOVERY_FEED_PROVIDER (object);
 
   switch (prop_id)
     {
@@ -66,12 +66,12 @@ eks_discovery_feed_database_content_provider_get_property (GObject    *object,
 }
 
 static void
-eks_discovery_feed_database_content_provider_set_property (GObject      *object,
-                                                           guint         prop_id,
-                                                           const GValue *value,
-                                                           GParamSpec   *pspec)
+eks_discovery_feed_provider_set_property (GObject      *object,
+                                          unsigned      prop_id,
+                                          const GValue *value,
+                                          GParamSpec   *pspec)
 {
-  EksDiscoveryFeedDatabaseContentProvider *self = EKS_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER (object);
+  EksDiscoveryFeedProvider *self = EKS_DISCOVERY_FEED_PROVIDER (object);
 
   switch (prop_id)
     {
@@ -86,9 +86,9 @@ eks_discovery_feed_database_content_provider_set_property (GObject      *object,
 }
 
 static void
-eks_discovery_feed_database_content_provider_finalize (GObject *object)
+eks_discovery_feed_provider_finalize (GObject *object)
 {
-  EksDiscoveryFeedDatabaseContentProvider *self = EKS_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER (object);
+  EksDiscoveryFeedProvider *self = EKS_DISCOVERY_FEED_PROVIDER (object);
 
   g_clear_pointer (&self->application_id, g_free);
   g_clear_object (&self->content_skeleton);
@@ -98,35 +98,35 @@ eks_discovery_feed_database_content_provider_finalize (GObject *object)
   g_clear_object (&self->video_skeleton);
   g_clear_object (&self->cancellable);
 
-  G_OBJECT_CLASS (eks_discovery_feed_database_content_provider_parent_class)->finalize (object);
+  G_OBJECT_CLASS (eks_discovery_feed_provider_parent_class)->finalize (object);
 }
 
 static void
-eks_discovery_feed_database_content_provider_class_init (EksDiscoveryFeedDatabaseContentProviderClass *klass)
+eks_discovery_feed_provider_class_init (EksDiscoveryFeedProviderClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->get_property = eks_discovery_feed_database_content_provider_get_property;
-  object_class->set_property = eks_discovery_feed_database_content_provider_set_property;
-  object_class->finalize = eks_discovery_feed_database_content_provider_finalize;
+  object_class->get_property = eks_discovery_feed_provider_get_property;
+  object_class->set_property = eks_discovery_feed_provider_set_property;
+  object_class->finalize = eks_discovery_feed_provider_finalize;
 
-  eks_discovery_feed_database_content_provider_props[PROP_APPLICATION_ID] =
+  eks_discovery_feed_provider_props[PROP_APPLICATION_ID] =
     g_param_spec_string ("application-id", "Application Id", "Application Id",
       "", G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (object_class,
                                      NPROPS,
-                                     eks_discovery_feed_database_content_provider_props);
+                                     eks_discovery_feed_provider_props);
 }
 
 typedef struct {
   GDBusMethodInvocation *invocation;
-  EksDiscoveryFeedDatabaseContentProvider  *provider;
+  EksDiscoveryFeedProvider *provider;
 } DiscoveryFeedQueryState;
 
 static DiscoveryFeedQueryState *
 discovery_feed_query_state_new (GDBusMethodInvocation                  *invocation,
-                                EksDiscoveryFeedDatabaseContentProvider *provider)
+                                EksDiscoveryFeedProvider *provider)
 {
   DiscoveryFeedQueryState *state = g_slice_new0 (DiscoveryFeedQueryState);
   state->invocation = g_object_ref (invocation);
@@ -538,11 +538,11 @@ artwork_card_descriptions_cb (GObject *source,
 }
 
 static gboolean
-handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skeleton,
-                                  GDBusMethodInvocation                  *invocation,
-                                  gpointer                                user_data)
+handle_artwork_card_descriptions (EksDiscoveryFeedProvider *skeleton,
+                                  GDBusMethodInvocation    *invocation,
+                                  gpointer                  user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+    EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -673,11 +673,11 @@ content_article_card_descriptions_cb (GObject *source,
 }
 
 static gboolean
-handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skeleton,
-                                          GDBusMethodInvocation                  *invocation,
-                                          gpointer                                user_data)
+handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
+                                          GDBusMethodInvocation    *invocation,
+                                          gpointer                  user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+    EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -755,11 +755,11 @@ get_word_of_the_day_content_cb (GObject *source,
 }
 
 static gboolean
-handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
-                            GDBusMethodInvocation                   *invocation,
-                            gpointer                                 user_data)
+handle_get_word_of_the_day (EksDiscoveryFeedProvider *skeleton,
+                            GDBusMethodInvocation    *invocation,
+                            gpointer                  user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+    EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -829,11 +829,11 @@ get_quote_of_the_day_content_cb (GObject *source,
 }
 
 static gboolean
-handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
-                             GDBusMethodInvocation                   *invocation,
-                             gpointer                                 user_data)
+handle_get_quote_of_the_day (EksDiscoveryFeedProvider *skeleton,
+                             GDBusMethodInvocation    *invocation,
+                             gpointer                  user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+    EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -921,11 +921,11 @@ recent_news_articles_cb (GObject *source,
 }
 
 static gboolean
-handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
-                        GDBusMethodInvocation                  *invocation,
-                        gpointer                                user_data)
+handle_get_recent_news (EksDiscoveryFeedProvider *skeleton,
+                        GDBusMethodInvocation    *invocation,
+                        gpointer                  user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+    EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -1017,11 +1017,11 @@ relevant_video_cb (GObject *source,
 }
 
 static gboolean
-handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
-                   GDBusMethodInvocation                  *invocation,
-                   gpointer                                user_data)
+handle_get_videos (EksDiscoveryFeedProvider *skeleton,
+                   GDBusMethodInvocation    *invocation,
+                   gpointer                  user_data)
 {
-    EksDiscoveryFeedDatabaseContentProvider *self = user_data;
+    EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
 
     /* Build up tags_match_any */
@@ -1054,10 +1054,10 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
 }
 
 static GDBusInterfaceSkeleton *
-eks_discovery_feed_database_content_provider_skeleton_for_interface (EksProvider *provider,
-                                                                     const gchar *interface)
+eks_discovery_feed_provider_skeleton_for_interface (EksProvider *provider,
+                                                    const char  *interface)
 {
-  EksDiscoveryFeedDatabaseContentProvider *self = EKS_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER (provider);
+  EksDiscoveryFeedProvider *self = EKS_DISCOVERY_FEED_PROVIDER (provider);
 
   if (g_strcmp0 (interface, "com.endlessm.DiscoveryFeedContent") == 0)
       return G_DBUS_INTERFACE_SKELETON (self->content_skeleton);
@@ -1077,13 +1077,13 @@ eks_discovery_feed_database_content_provider_skeleton_for_interface (EksProvider
 }
 
 static void
-eks_discovery_feed_database_content_provider_interface_init (EksProviderInterface *iface)
+eks_discovery_feed_provider_interface_init (EksProviderInterface *iface)
 {
-  iface->skeleton_for_interface = eks_discovery_feed_database_content_provider_skeleton_for_interface;
+  iface->skeleton_for_interface = eks_discovery_feed_provider_skeleton_for_interface;
 }
 
 static void
-eks_discovery_feed_database_content_provider_init (EksDiscoveryFeedDatabaseContentProvider *self)
+eks_discovery_feed_provider_init (EksDiscoveryFeedProvider *self)
 {
   self->content_skeleton = eks_discovery_feed_content_skeleton_new ();
   g_signal_connect (self->content_skeleton, "handle-article-card-descriptions",

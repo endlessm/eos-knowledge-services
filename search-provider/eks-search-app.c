@@ -24,7 +24,7 @@ struct _EksSearchApp
   EksSubtreeDispatcher *dispatcher;
   // Hash table with app id string keys, EksSearchProvider values
   GHashTable *app_search_providers;
-  // Hash table with app id string keys, EksDiscoveryFeedContentProvider values
+  // Hash table with app id string keys, EksDiscoveryFeedProvider values
   GHashTable *discovery_feed_content_providers;
 };
 
@@ -162,7 +162,7 @@ subtree_object_info_for_interface (EksSearchApp      *self,
            g_strcmp0 (interface, "com.endlessm.DiscoveryFeedVideo") == 0 ||
            g_strcmp0 (interface, "com.endlessm.DiscoveryFeedArtwork") == 0)
     {
-      info->create_type = EKS_TYPE_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER;
+      info->create_type = EKS_TYPE_DISCOVERY_FEED_PROVIDER;
       info->cache = self->discovery_feed_content_providers;
     }
   else
