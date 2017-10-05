@@ -119,14 +119,6 @@ eks_discovery_feed_database_content_provider_class_init (EksDiscoveryFeedDatabas
                                      eks_discovery_feed_database_content_provider_props);
 }
 
-static  gchar *
-object_path_from_app_id (const gchar *application_id)
-{
-  g_autoptr(GRegex) dot_regex = g_regex_new ("\\.", 0, 0, NULL);
-  g_autofree gchar *replaced = g_regex_replace (dot_regex, application_id, -1, 0, "/", 0, NULL);
-  return g_strconcat ("/", replaced, NULL);
-}
-
 typedef struct {
   GDBusMethodInvocation *invocation;
   EksDiscoveryFeedDatabaseContentProvider  *provider;
