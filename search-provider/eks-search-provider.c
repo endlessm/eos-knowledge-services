@@ -12,6 +12,16 @@
 #define RESULTS_LIMIT 5
 #define MAX_DESCRIPTION_LENGTH 200
 
+/**
+ * EksSearchProvider:
+ *
+ * A search provider for a single knowledge app, to be used through dbus by the
+ * shell's global search. Requires the app id of the knowledge app it should run
+ * searches for.
+ *
+ * This search provider will activate the actual knowledge app over dbus with a
+ * result or search to display.
+ */
 struct _EksSearchProvider
 {
   GObject parent_instance;

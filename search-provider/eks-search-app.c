@@ -12,14 +12,10 @@
 #include <string.h>
 
 /**
- * EksSearchProvider:
+ * EksSearchApp:
  *
- * A search provider for a single knowledge app, to be used through dbus by the
- * shell's global search. Requires the app id of the knowledge app it should run
- * searches for.
- *
- * This search provider will activate the actual knowledge app over dbus with a
- * result or search to display.
+ * Keeps track of all apps that use this version of EknServices and holds their
+ * search provider and discovery feed DBus objects.
  */
 struct _EksSearchApp
 {
