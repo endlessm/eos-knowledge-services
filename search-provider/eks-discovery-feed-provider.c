@@ -410,23 +410,25 @@ typedef enum {
 } DiscoveryFeedCustomProps;
 
 typedef struct _QueryPendingUpperBound {
-  EkncQueryObject     *query;
-  guint               offset_within_upper_bound;
-  guint               wraparound_upper_bound;
-  GCancellable        *cancellable;
-  GAsyncReadyCallback main_query_ready_callback;
-  gpointer            main_query_ready_data;
-  GDestroyNotify      main_query_ready_destroy;
+  EkncQueryObject       *query;
+  guint                 offset_within_upper_bound;
+  guint                 wraparound_upper_bound;
+  GCancellable          *cancellable;
+  GDBusMethodInvocation *invocation;
+  GAsyncReadyCallback   main_query_ready_callback;
+  gpointer              main_query_ready_data;
+  GDestroyNotify        main_query_ready_destroy;
 } QueryPendingUpperBound;
 
 static QueryPendingUpperBound *
-query_pending_upper_bound_new (EkncQueryObject     *query,
-                               guint               offset_within_upper_bound,
-                               guint               wraparound_upper_bound,
-                               GCancellable        *cancellable,
-                               GAsyncReadyCallback main_query_ready_callback,
-                               gpointer            main_query_ready_data,
-                               GDestroyNotify      main_query_ready_destroy)
+query_pending_upper_bound_new (EkncQueryObject       *query,
+                               guint                  offset_within_upper_bound,
+                               guint                  wraparound_upper_bound,
+                               GDBusMethodInvocation *invocation,
+                               GCancellable          *cancellable,
+                               GAsyncReadyCallback    main_query_ready_callback,
+                               gpointer               main_query_ready_data,
+                               GDestroyNotify         main_query_ready_destroy)
 {
   QueryPendingUpperBound *data = g_new0 (QueryPendingUpperBound, 1);
   data->query = g_object_ref (query);
@@ -435,6 +437,7 @@ query_pending_upper_bound_new (EkncQueryObject     *query,
 
   /* Keep cancellable alive if we got one, otherwise ignore it */
   data->cancellable = cancellable ? g_object_ref (cancellable) : NULL;
+  data->invocation = g_object_ref (invocation);
   data->main_query_ready_callback = main_query_ready_callback;
   data->main_query_ready_data = main_query_ready_data;
   data->main_query_ready_destroy = main_query_ready_destroy;
@@ -447,6 +450,7 @@ query_pending_upper_bound_free (QueryPendingUpperBound *data)
 {
   g_object_unref (data->query);
   g_clear_object (&data->cancellable);
+  g_object_unref (data->invocation);
   g_clear_pointer (&data->main_query_ready_data, data->main_query_ready_destroy);
 
   g_free (data);
@@ -469,6 +473,11 @@ on_received_upper_bound_result (GObject      *source,
     {
       g_warning ("Unable to get upper bound on results, aborting query: %s",
                  error->message);
+      g_dbus_method_invocation_take_error (pending->invocation,
+                                           g_steal_pointer (&error));
+
+      /* No need to free_full the out models and shards here,
+       * g_slist_copy_deep is not called if this function returns early. */
       return;
     }
 
@@ -507,14 +516,15 @@ on_received_upper_bound_result (GObject      *source,
  * in the limit parameter to the query
  */
 static void
-query_with_wraparound_offset (EkncEngine          *engine,
-                              EkncQueryObject     *query,
-                              guint               offset_within_upper_bound,
-                              guint               wraparound_upper_bound,
-                              GCancellable        *cancellable,
-                              GAsyncReadyCallback main_query_ready_callback,
-                              gpointer            main_query_ready_data,
-                              gpointer            main_query_ready_destroy)
+query_with_wraparound_offset (EkncEngine            *engine,
+                              EkncQueryObject       *query,
+                              guint                  offset_within_upper_bound,
+                              guint                  wraparound_upper_bound,
+                              GDBusMethodInvocation *invocation,
+                              GCancellable          *cancellable,
+                              GAsyncReadyCallback    main_query_ready_callback,
+                              gpointer               main_query_ready_data,
+                              GDestroyNotify         main_query_ready_destroy)
 {
   /* Override the limit, setting it to one. In the returned query we'll get
    * nothing back, but Xapian will tell us how many models matched our query
@@ -533,6 +543,7 @@ query_with_wraparound_offset (EkncEngine          *engine,
                      query_pending_upper_bound_new (query,
                                                     offset_within_upper_bound,
                                                     wraparound_upper_bound,
+                                                    invocation,
                                                     cancellable,
                                                     main_query_ready_callback,
                                                     main_query_ready_data,
@@ -696,6 +707,7 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
                                                 NULL),
                                   get_day_of_year (),
                                   DAYS_IN_YEAR,
+                                  invocation,
                                   self->cancellable,
                                   artwork_card_descriptions_cb,
                                   discovery_feed_query_state_new (invocation, self),
@@ -851,6 +863,7 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
                                                 NULL),
                                   get_day_of_year (),
                                   DAYS_IN_YEAR,
+                                  invocation,
                                   self->cancellable,
                                   content_article_card_descriptions_cb,
                                   discovery_feed_query_state_new (invocation, self),
@@ -943,6 +956,7 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                                                 NULL),
                                   get_day_of_year (),
                                   DAYS_IN_YEAR,
+                                  invocation,
                                   self->cancellable,
                                   get_word_of_the_day_content_cb,
                                   discovery_feed_query_state_new (invocation, self),
@@ -1033,6 +1047,7 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                                                 NULL),
                                   get_day_of_year (),
                                   DAYS_IN_YEAR,
+                                  invocation,
                                   self->cancellable,
                                   get_quote_of_the_day_content_cb,
                                   discovery_feed_query_state_new (invocation, self),
@@ -1266,9 +1281,11 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
                                                 NULL),
                                   get_day_of_year (),
                                   DAYS_IN_YEAR,
+                                  invocation,
                                   self->cancellable,
                                   relevant_video_cb,
-                                  discovery_feed_query_state_new (invocation, self));
+                                  discovery_feed_query_state_new (invocation, self),
+                                  (GDestroyNotify) discovery_feed_query_state_free);
 
     return TRUE;
 }
