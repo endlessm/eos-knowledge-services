@@ -320,6 +320,7 @@ typedef struct _QueryPendingUpperBound {
   GCancellable        *cancellable;
   GAsyncReadyCallback main_query_ready_callback;
   gpointer            main_query_ready_data;
+  GDestroyNotify      main_query_ready_destroy;
 } QueryPendingUpperBound;
 
 static QueryPendingUpperBound *
@@ -328,7 +329,8 @@ query_pending_upper_bound_new (EkncQueryObject     *query,
                                guint               wraparound_upper_bound,
                                GCancellable        *cancellable,
                                GAsyncReadyCallback main_query_ready_callback,
-                               gpointer            main_query_ready_data)
+                               gpointer            main_query_ready_data,
+                               GDestroyNotify      main_query_ready_destroy)
 {
   QueryPendingUpperBound *data = g_new0 (QueryPendingUpperBound, 1);
   data->query = g_object_ref (query);
@@ -339,6 +341,7 @@ query_pending_upper_bound_new (EkncQueryObject     *query,
   data->cancellable = cancellable ? g_object_ref (cancellable) : NULL;
   data->main_query_ready_callback = main_query_ready_callback;
   data->main_query_ready_data = main_query_ready_data;
+  data->main_query_ready_destroy = main_query_ready_destroy;
 
   return data;
 }
@@ -348,6 +351,7 @@ query_pending_upper_bound_free (QueryPendingUpperBound *data)
 {
   g_object_unref (data->query);
   g_clear_object (&data->cancellable);
+  g_clear_pointer (&data->main_query_ready_data, data->main_query_ready_destroy);
 
   g_free (data);
 }
@@ -393,7 +397,7 @@ on_received_upper_bound_result (GObject      *source,
                      pending->query,
                      pending->cancellable,
                      pending->main_query_ready_callback,
-                     pending->main_query_ready_data);
+                     g_steal_pointer (&pending->main_query_ready_data));
 }
 
 /* This function executes the given query with an offset computed
@@ -413,7 +417,8 @@ query_with_wraparound_offset (EkncEngine          *engine,
                               guint               wraparound_upper_bound,
                               GCancellable        *cancellable,
                               GAsyncReadyCallback main_query_ready_callback,
-                              gpointer            main_query_ready_data)
+                              gpointer            main_query_ready_data,
+                              gpointer            main_query_ready_destroy)
 {
   /* Override the limit, setting it to one. In the returned query we'll get
    * nothing back, but Xapian will tell us how many models matched our query
@@ -434,7 +439,8 @@ query_with_wraparound_offset (EkncEngine          *engine,
                                                     wraparound_upper_bound,
                                                     cancellable,
                                                     main_query_ready_callback,
-                                                    main_query_ready_data));
+                                                    main_query_ready_data,
+                                                    main_query_ready_destroy));
 }
 
 static void
@@ -568,7 +574,8 @@ handle_artwork_card_descriptions (EksDiscoveryFeedProvider *skeleton,
                                   DAYS_IN_YEAR,
                                   self->cancellable,
                                   artwork_card_descriptions_cb,
-                                  discovery_feed_query_state_new (invocation, self));
+                                  discovery_feed_query_state_new (invocation, self),
+                                  (GDestroyNotify) discovery_feed_query_state_free);
 
     return TRUE;
 }
@@ -707,7 +714,8 @@ handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
                                   DAYS_IN_YEAR,
                                   self->cancellable,
                                   content_article_card_descriptions_cb,
-                                  discovery_feed_query_state_new (invocation, self));
+                                  discovery_feed_query_state_new (invocation, self),
+                                  (GDestroyNotify) discovery_feed_query_state_free);
 
     return TRUE;
 }
@@ -783,7 +791,8 @@ handle_get_word_of_the_day (EksDiscoveryFeedProvider *skeleton,
                                   DAYS_IN_YEAR,
                                   self->cancellable,
                                   get_word_of_the_day_content_cb,
-                                  discovery_feed_query_state_new (invocation, self));
+                                  discovery_feed_query_state_new (invocation, self),
+                                  (GDestroyNotify) discovery_feed_query_state_free);
 
     return TRUE;
 }
@@ -857,7 +866,8 @@ handle_get_quote_of_the_day (EksDiscoveryFeedProvider *skeleton,
                                   DAYS_IN_YEAR,
                                   self->cancellable,
                                   get_quote_of_the_day_content_cb,
-                                  discovery_feed_query_state_new (invocation, self));
+                                  discovery_feed_query_state_new (invocation, self),
+                                  (GDestroyNotify) discovery_feed_query_state_free);
 
     return TRUE;
 }
