@@ -9,13 +9,14 @@
 
 bin_PROGRAMS =
 CLEANFILES =
+MAINTAINERCLEANFILES = $(GITIGNORE_MAINTAINERCLEANFILES_TOPLEVEL)
 EXTRA_DIST =
 
 # # # SUBSTITUTED FILES # # #
 # These files need to be filled in with make variables
 do_subst = $(SED) -e 's|%bindir%|$(bindir)|g'
 subst_files = \
-	search-provider/com.endlessm.EknServices.SearchProviderV1.service \
+	search-provider/com.endlessm.EknServices2.SearchProviderV2.service \
 	$(NULL)
 
 $(subst_files): %: %.in Makefile
@@ -28,7 +29,7 @@ EXTRA_DIST += $(patsubst %,%.in,$(subst_files))
 # # # DBUS SERVICES # # #
 servicedir = $(datadir)/dbus-1/services
 service_DATA = \
-	search-provider/com.endlessm.EknServices.SearchProviderV1.service \
+	search-provider/com.endlessm.EknServices2.SearchProviderV2.service \
 	$(NULL)
 
 search-provider/eks-search-provider-dbus.h search-provider/eks-search-provider-dbus.c: search-provider/eks-search-provider-dbus.xml Makefile.am
@@ -70,7 +71,7 @@ BUILT_SOURCES = \
 	search-provider/eks-knowledge-app-dbus.c \
 	$(NULL)
 
-eks_search_provider_v1_SOURCES = \
+eks_search_provider_v2_SOURCES = \
 	search-provider/eks-discovery-feed-provider.c \
 	search-provider/eks-discovery-feed-provider.h \
 	search-provider/eks-discovery-feed-provider-dbus.c \
@@ -89,16 +90,18 @@ eks_search_provider_v1_SOURCES = \
 	search-provider/eks-subtree-dispatcher.c \
 	search-provider/eks-subtree-dispatcher.h \
 	$(NULL)
-eks_search_provider_v1_CFLAGS = \
+eks_search_provider_v2_CFLAGS = \
 	@SEARCH_PROVIDER_CFLAGS@ \
 	-I $(builddir)/search-provider \
 	$(AM_CFLAGS) \
 	$(NULL)
-eks_search_provider_v1_LDADD = \
+eks_search_provider_v2_LDADD = \
 	@SEARCH_PROVIDER_LIBS@ \
 	$(NULL)
 
 # # # BINARIES # # #
 bin_PROGRAMS += \
-	eks-search-provider-v1 \
+	eks-search-provider-v2 \
 	$(NULL)
+
+-include $(top_srcdir)/git.mk
