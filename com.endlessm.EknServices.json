@@ -2,7 +2,7 @@
     "app-id": "com.endlessm.EknServices2",
     "branch": "master",
     "runtime": "com.endlessm.apps.Platform",
-    "runtime-version": "master",
+    "runtime-version": "2",
     "sdk": "com.endlessm.apps.Sdk",
     "finish-args": [
         "--filesystem=/var/lib/flatpak:ro",
