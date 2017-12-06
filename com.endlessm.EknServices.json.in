@@ -17,8 +17,8 @@
             "sources": [
                 {
                     "type": "git",
-                    "url": "https://c5a7fd3e12c1d7b20bbff48a541d36f92d1e5a2d@github.com/endlessm/eos-knowledge-services.git",
-                    "branch": "sdk-2"
+                    "path": ".",
+                    "branch": "@GIT_CLONE_BRANCH@"
                 }
             ]
         }
