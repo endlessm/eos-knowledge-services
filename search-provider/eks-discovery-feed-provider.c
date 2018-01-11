@@ -496,46 +496,8 @@ artwork_card_descriptions_cb (GObject *source,
       EkncContentObjectModel *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
 
-      /* Examine the discovery-feed-content object first and set flags
-       * for things that we've overridden */
-      g_autoptr(GVariant) discovery_feed_content_variant;
-      g_object_get (model,
-                    "discovery-feed-content",
-                    &discovery_feed_content_variant,
-                    NULL);
-
-      if (discovery_feed_content_variant)
-        {
-          GVariantIter discovery_feed_content_iter;
-          g_variant_iter_init (&discovery_feed_content_iter,
-                               discovery_feed_content_variant);
-
-          gchar *key;
-          GVariant *value;
-
-          while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
-            {
-              if (g_strcmp0 (key, "blurbs") == 0)
-                {
-                  g_autofree gchar *title = select_string_from_variant_from_day (value);
-
-                  if (title)
-                    {
-                      add_key_value_pair_to_variant (&builder, "title", title);
-                      add_key_value_pair_to_variant (&builder, "synopsis", "");
-                      flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
-                    }
-                }
-            }
-        }
-
-      /* Add key-value pairs based on things we haven't addded yet */
-      if (!(flags & DISCOVERY_FEED_SET_CUSTOM_TITLE))
-        {
-          add_key_value_pair_from_model_to_variant (model, &builder, "title");
-          add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
-        }
-
+      add_key_value_pair_from_model_to_variant (model, &builder, "title");
+      add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
