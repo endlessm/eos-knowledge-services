@@ -17,6 +17,7 @@
 
 #define NUMBER_OF_ARTICLES 5
 #define DAYS_IN_YEAR 365
+#define SENSIBLE_QUERY_LIMIT 500
 
 struct _EksDiscoveryFeedDatabaseContentProvider
 {
@@ -1177,6 +1178,7 @@ relevant_video_cb (GObject *source,
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
+  gint videos_found = 0;
   for (GSList *l = models; l; l = l->next)
     {
       EkncContentObjectModel *model = l->data;
@@ -1198,6 +1200,10 @@ relevant_video_cb (GObject *source,
 
       /* Stop building object */
       g_variant_builder_close (&builder);
+
+      videos_found += 1;
+      if (videos_found == NUMBER_OF_ARTICLES)
+        break;
     }
   eks_discovery_feed_video_complete_get_videos (state->provider->video_skeleton,
                                                 state->invocation,
@@ -1245,7 +1251,7 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                 "tags-match-any", tags_match_any,
-                                                "limit", NUMBER_OF_ARTICLES,,
+                                                "limit", SENSIBLE_QUERY_LIMIT,
                                                 "app-id", self->application_id,
                                                 NULL),
                                   get_day_of_year (),
