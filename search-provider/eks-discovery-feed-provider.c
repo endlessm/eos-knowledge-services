@@ -15,6 +15,8 @@
 
 #define NUMBER_OF_ARTICLES 5
 #define DAYS_IN_YEAR 365
+// In SDK2, the default limit is 0 in SDK3, the default limit is all matches
+#define SENSIBLE_QUERY_LIMIT 500
 
 struct _EksDiscoveryFeedProvider
 {
@@ -928,6 +930,7 @@ relevant_video_cb (GObject *source,
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
+  gint videos_found = 0;
   for (GSList *l = models; l; l = l->next)
     {
       if (!EKNC_IS_VIDEO_OBJECT_MODEL (l->data))
@@ -945,6 +948,10 @@ relevant_video_cb (GObject *source,
 
       /* Stop building object */
       g_variant_builder_close (&builder);
+
+      videos_found += 1;
+      if (videos_found == NUMBER_OF_ARTICLES)
+        break;
     }
   eks_discovery_feed_video_complete_get_videos (state->provider->video_skeleton,
                                                 state->invocation,
@@ -969,7 +976,7 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
                                                      "tags-match-any", tags_match_any,
                                                      "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                      "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
-                                                     "limit", NUMBER_OF_ARTICLES,
+                                                     "limit", SENSIBLE_QUERY_LIMIT,
                                                      "app-id", self->application_id,
                                                      NULL);
 
