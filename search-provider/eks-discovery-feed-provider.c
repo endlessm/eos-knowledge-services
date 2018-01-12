@@ -193,20 +193,12 @@ add_key_value_int_to_str_pair_from_model_to_variant (EkncContentObjectModel *mod
 }
 
 static void
-add_author_from_model_to_variant (EkncContentObjectModel *model,
+add_author_from_model_to_variant (EkncArticleObjectModel *model,
                                   GVariantBuilder        *builder,
                                   const char             *key)
 {
-  g_autoptr(GVariant) authors;
-  g_object_get (model, "authors", &authors, NULL);
-
-  if (authors)
-    {
-      g_autoptr(GVariant) author = g_variant_get_child_value (authors, 0);
-      add_key_value_pair_to_variant (builder, key, g_variant_dup_string (author, NULL));
-    }
-  else
-    add_key_value_pair_to_variant (builder, key, "");
+  char * const *authors = eknc_article_object_model_get_authors (model);
+  add_key_value_pair_to_variant (builder, key, authors ? authors[0] : "");
 }
 
 static gint
@@ -501,7 +493,8 @@ artwork_card_descriptions_cb (GObject *source,
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
-      add_author_from_model_to_variant (model, &builder, "author");
+      add_author_from_model_to_variant (EKNC_ARTICLE_OBJECT_MODEL (model),
+                                        &builder, "author");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
@@ -523,12 +516,7 @@ handle_artwork_card_descriptions (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -660,16 +648,8 @@ handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
-
-    GVariantBuilder tags_match_all_builder;
-    g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_all_builder, "s", "EknHasDiscoveryFeedTitle");
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
+    const char *tags_match_all[] = { "EknHasDiscoveryFeedTitle", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -679,6 +659,7 @@ handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                 "tags-match-any", tags_match_any,
+                                                "tags-match-all", tags_match_all,
                                                 "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                 "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                 "limit", NUMBER_OF_ARTICLES,
@@ -744,12 +725,7 @@ handle_get_word_of_the_day (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -803,7 +779,8 @@ get_quote_of_the_day_content_cb (GObject *source,
   EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "title");
-  add_author_from_model_to_variant (model, &builder, "author");
+  add_author_from_model_to_variant (EKNC_ARTICLE_OBJECT_MODEL (model), &builder,
+                                    "author");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   eks_discovery_feed_quote_complete_get_quote_of_the_day (state->provider->quote_skeleton,
@@ -820,12 +797,7 @@ handle_get_quote_of_the_day (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -914,12 +886,7 @@ handle_get_recent_news (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
@@ -1010,13 +977,7 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknMediaObject");
-    
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknMediaObject", NULL };
 
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
