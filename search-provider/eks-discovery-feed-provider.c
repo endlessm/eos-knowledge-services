@@ -223,19 +223,15 @@ get_day_of_year (void)
   return g_date_time_get_day_of_year (datetime);
 }
 
-static gchar *
-select_string_from_variant_from_day (GVariant *variant)
+static const char *
+select_string_from_array_from_day (JsonArray *array)
 {
-  gsize size = g_variant_n_children (variant);
+  guint size = json_array_get_length (array);
   if (size == 0)
     return NULL;
 
   gint index = get_day_of_week () % size;
-  /* We need to unwrap the variant and then the inner string first */
-  g_autoptr(GVariant) child_variant = g_variant_get_child_value (variant, index);
-  g_autoptr(GVariant) child_value = g_variant_get_variant (child_variant);
-
-  return g_variant_dup_string (child_value, NULL);
+  return json_array_get_string_element (array, index);
 }
 
 typedef enum {
@@ -596,36 +592,25 @@ content_article_card_descriptions_cb (GObject *source,
       EkncContentObjectModel *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
 
-      /* Examine the discovery-feed-content object first and set flags
+      /* Examine the discovery-feed-content string first and set flags
        * for things that we've overridden */
-      g_autoptr(GVariant) discovery_feed_content_variant;
+      g_autoptr(JsonObject) discovery_feed_content = NULL;
       g_object_get (model,
-                    "discovery-feed-content",
-                    &discovery_feed_content_variant,
+                    "discovery-feed-content", &discovery_feed_content,
                     NULL);
 
-      if (discovery_feed_content_variant)
+      if (discovery_feed_content != NULL &&
+          json_object_has_member (discovery_feed_content, "blurbs"))
         {
-          GVariantIter discovery_feed_content_iter;
-          g_variant_iter_init (&discovery_feed_content_iter,
-                               discovery_feed_content_variant);
+          JsonArray *blurbs = json_object_get_array_member (discovery_feed_content,
+                                                            "blurbs");
+          const char *title = select_string_from_array_from_day (blurbs);
 
-          gchar *key;
-          GVariant *value;
-
-          while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
+          if (title)
             {
-              if (g_strcmp0 (key, "blurbs") == 0)
-                {
-                  g_autofree gchar *title = select_string_from_variant_from_day (value);
-
-                  if (title)
-                    {
-                      add_key_value_pair_to_variant (&builder, "title", title);
-                      add_key_value_pair_to_variant (&builder, "synopsis", "");
-                      flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
-                    }
-                }
+              add_key_value_pair_to_variant (&builder, "title", title);
+              add_key_value_pair_to_variant (&builder, "synopsis", "");
+              flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
             }
         }
 
