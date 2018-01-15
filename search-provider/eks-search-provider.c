@@ -221,7 +221,7 @@ do_search (EksSearchProvider *self,
 
   g_application_hold (g_application_get_default ());
 
-  const char *tags_match_any = { "EknArticleObject", NULL };
+  const char *tags_match_any[] = { "EknArticleObject", NULL };
 
   self->cancellable = g_cancellable_new ();
   g_autoptr(EkncQueryObject) query_obj = g_object_new (EKNC_TYPE_QUERY_OBJECT,
