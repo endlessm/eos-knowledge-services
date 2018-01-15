@@ -230,8 +230,8 @@ select_string_from_array_from_day (JsonArray *array)
   if (size == 0)
     return NULL;
 
-  gint index = get_day_of_week () % size;
-  return json_array_get_string_element (array, index);
+  int ix = get_day_of_week () % size;
+  return json_array_get_string_element (array, ix);
 }
 
 typedef enum {
