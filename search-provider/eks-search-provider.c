@@ -212,8 +212,8 @@ do_search (EksSearchProvider *self,
       g_clear_object (&self->cancellable);
     }
 
-  g_autofree gchar *query = g_strjoinv (" ", terms);
-  if (*query == '\0')
+  g_autofree char *search_terms = g_strjoinv (" ", terms);
+  if (*search_terms == '\0')
     {
       g_dbus_method_invocation_return_value (invocation, g_variant_new ("(as)", NULL));
       return;
@@ -221,11 +221,11 @@ do_search (EksSearchProvider *self,
 
   g_application_hold (g_application_get_default ());
 
-  const char *tags_match_any = { "EknArticleObject", NULL };
+  const char *tags_match_any[] = { "EknArticleObject", NULL };
 
   self->cancellable = g_cancellable_new ();
   g_autoptr(EkncQueryObject) query_obj = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                        "query", query,
+                                                        "search-terms", search_terms,
                                                         "limit", RESULTS_LIMIT,
                                                         "app-id", self->application_id,
                                                         "tags-match-any", tags_match_any,
