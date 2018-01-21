@@ -195,12 +195,20 @@ add_key_value_int_to_str_pair_from_model_to_variant (EkncContentObjectModel *mod
 }
 
 static void
-add_author_from_model_to_variant (EkncArticleObjectModel *model,
-                                  GVariantBuilder        *builder,
-                                  const char             *key)
+add_first_string_value_from_model_to_variant (EkncContentObjectModel *model,
+                                              GVariantBuilder        *builder,
+                                              const char             *model_key,
+                                              const char             *key)
 {
-  char * const *authors = eknc_article_object_model_get_authors (model);
-  add_key_value_pair_to_variant (builder, key, authors ? authors[0] : "");
+  g_auto(GStrv) values;
+  g_autofree gchar *underscore_key = underscorify (key);
+
+  g_object_get (model, model_key, &values, NULL);
+
+  if (values && values[0] != NULL)
+    add_key_value_pair_to_variant (builder, underscore_key, values[0]);
+  else
+    add_key_value_pair_to_variant (builder, underscore_key, "");
 }
 
 static gint
@@ -491,8 +499,8 @@ artwork_card_descriptions_cb (GObject *source,
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
-      add_author_from_model_to_variant (EKNC_ARTICLE_OBJECT_MODEL (model),
-                                        &builder, "author");
+      add_first_string_value_from_model_to_variant (model, &builder, "authors", "author");
+      add_first_string_value_from_model_to_variant (model, &builder, "temporal-coverage", "first-date");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
@@ -766,8 +774,7 @@ get_quote_of_the_day_content_cb (GObject *source,
   EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "title");
-  add_author_from_model_to_variant (EKNC_ARTICLE_OBJECT_MODEL (model), &builder,
-                                    "author");
+  add_first_string_value_from_model_to_variant (model, &builder, "authors", "author");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   eks_discovery_feed_quote_complete_get_quote_of_the_day (state->provider->quote_skeleton,
