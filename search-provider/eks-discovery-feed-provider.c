@@ -195,20 +195,12 @@ add_key_value_int_to_str_pair_from_model_to_variant (EkncContentObjectModel *mod
 }
 
 static void
-add_author_from_model_to_variant (EkncContentObjectModel *model,
+add_author_from_model_to_variant (EkncArticleObjectModel *model,
                                   GVariantBuilder        *builder,
                                   const char             *key)
 {
-  g_autoptr(GVariant) authors;
-  g_object_get (model, "authors", &authors, NULL);
-
-  if (authors)
-    {
-      g_autoptr(GVariant) author = g_variant_get_child_value (authors, 0);
-      add_key_value_pair_to_variant (builder, key, g_variant_dup_string (author, NULL));
-    }
-  else
-    add_key_value_pair_to_variant (builder, key, "");
+  char * const *authors = eknc_article_object_model_get_authors (model);
+  add_key_value_pair_to_variant (builder, key, authors ? authors[0] : "");
 }
 
 static gint
@@ -225,19 +217,15 @@ get_day_of_year (void)
   return g_date_time_get_day_of_year (datetime);
 }
 
-static gchar *
-select_string_from_variant_from_day (GVariant *variant)
+static const char *
+select_string_from_array_from_day (JsonArray *array)
 {
-  gsize size = g_variant_n_children (variant);
+  guint size = json_array_get_length (array);
   if (size == 0)
     return NULL;
 
-  gint index = get_day_of_week () % size;
-  /* We need to unwrap the variant and then the inner string first */
-  g_autoptr(GVariant) child_variant = g_variant_get_child_value (variant, index);
-  g_autoptr(GVariant) child_value = g_variant_get_variant (child_variant);
-
-  return g_variant_dup_string (child_value, NULL);
+  int ix = get_day_of_week () % size;
+  return json_array_get_string_element (array, ix);
 }
 
 typedef enum {
@@ -498,50 +486,13 @@ artwork_card_descriptions_cb (GObject *source,
       EkncContentObjectModel *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
 
-      /* Examine the discovery-feed-content object first and set flags
-       * for things that we've overridden */
-      g_autoptr(GVariant) discovery_feed_content_variant;
-      g_object_get (model,
-                    "discovery-feed-content",
-                    &discovery_feed_content_variant,
-                    NULL);
-
-      if (discovery_feed_content_variant)
-        {
-          GVariantIter discovery_feed_content_iter;
-          g_variant_iter_init (&discovery_feed_content_iter,
-                               discovery_feed_content_variant);
-
-          gchar *key;
-          GVariant *value;
-
-          while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
-            {
-              if (g_strcmp0 (key, "blurbs") == 0)
-                {
-                  g_autofree gchar *title = select_string_from_variant_from_day (value);
-
-                  if (title)
-                    {
-                      add_key_value_pair_to_variant (&builder, "title", title);
-                      add_key_value_pair_to_variant (&builder, "synopsis", "");
-                      flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
-                    }
-                }
-            }
-        }
-
-      /* Add key-value pairs based on things we haven't addded yet */
-      if (!(flags & DISCOVERY_FEED_SET_CUSTOM_TITLE))
-        {
-          add_key_value_pair_from_model_to_variant (model, &builder, "title");
-          add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
-        }
-
+      add_key_value_pair_from_model_to_variant (model, &builder, "title");
+      add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
-      add_author_from_model_to_variant (model, &builder, "author");
+      add_author_from_model_to_variant (EKNC_ARTICLE_OBJECT_MODEL (model),
+                                        &builder, "author");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
@@ -563,12 +514,7 @@ handle_artwork_card_descriptions (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -636,36 +582,25 @@ content_article_card_descriptions_cb (GObject *source,
       EkncContentObjectModel *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
 
-      /* Examine the discovery-feed-content object first and set flags
+      /* Examine the discovery-feed-content string first and set flags
        * for things that we've overridden */
-      g_autoptr(GVariant) discovery_feed_content_variant;
+      g_autoptr(JsonObject) discovery_feed_content = NULL;
       g_object_get (model,
-                    "discovery-feed-content",
-                    &discovery_feed_content_variant,
+                    "discovery-feed-content", &discovery_feed_content,
                     NULL);
 
-      if (discovery_feed_content_variant)
+      if (discovery_feed_content != NULL &&
+          json_object_has_member (discovery_feed_content, "blurbs"))
         {
-          GVariantIter discovery_feed_content_iter;
-          g_variant_iter_init (&discovery_feed_content_iter,
-                               discovery_feed_content_variant);
+          JsonArray *blurbs = json_object_get_array_member (discovery_feed_content,
+                                                            "blurbs");
+          const char *title = select_string_from_array_from_day (blurbs);
 
-          gchar *key;
-          GVariant *value;
-
-          while (g_variant_iter_loop (&discovery_feed_content_iter, "{sv}", &key, &value))
+          if (title)
             {
-              if (g_strcmp0 (key, "blurbs") == 0)
-                {
-                  g_autofree gchar *title = select_string_from_variant_from_day (value);
-
-                  if (title)
-                    {
-                      add_key_value_pair_to_variant (&builder, "title", title);
-                      add_key_value_pair_to_variant (&builder, "synopsis", "");
-                      flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
-                    }
-                }
+              add_key_value_pair_to_variant (&builder, "title", title);
+              add_key_value_pair_to_variant (&builder, "synopsis", "");
+              flags |= DISCOVERY_FEED_SET_CUSTOM_TITLE;
             }
         }
 
@@ -700,16 +635,8 @@ handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
-
-    GVariantBuilder tags_match_all_builder;
-    g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_all_builder, "s", "EknHasDiscoveryFeedTitle");
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
+    const char *tags_match_all[] = { "EknHasDiscoveryFeedTitle", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -719,6 +646,7 @@ handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                 "tags-match-any", tags_match_any,
+                                                "tags-match-all", tags_match_all,
                                                 "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                 "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                 "limit", NUMBER_OF_ARTICLES,
@@ -784,12 +712,7 @@ handle_get_word_of_the_day (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -843,7 +766,8 @@ get_quote_of_the_day_content_cb (GObject *source,
   EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "title");
-  add_author_from_model_to_variant (model, &builder, "author");
+  add_author_from_model_to_variant (EKNC_ARTICLE_OBJECT_MODEL (model), &builder,
+                                    "author");
   add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   eks_discovery_feed_quote_complete_get_quote_of_the_day (state->provider->quote_skeleton,
@@ -860,12 +784,7 @@ handle_get_quote_of_the_day (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -954,12 +873,7 @@ handle_get_recent_news (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
@@ -1055,13 +969,7 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-
-    /* Build up tags_match_any */
-    GVariantBuilder tags_match_any_builder;
-    g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknMediaObject");
-    
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    const char *tags_match_any[] = { "EknMediaObject", NULL };
 
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
