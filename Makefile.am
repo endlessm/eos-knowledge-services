@@ -48,6 +48,14 @@ search-provider/eks-knowledge-app-dbus.h search-provider/eks-knowledge-app-dbus.
 	--generate-c-code search-provider/eks-knowledge-app-dbus \
 	$<
 
+search-provider/eks-metadata-provider-dbus.h search-provider/eks-metadata-provider-dbus.c: search-provider/eks-metadata-provider-dbus.xml Makefile.am
+	$(AM_V_GEN) $(MKDIR_P) $(@D) && \
+	$(GDBUS_CODEGEN) \
+	--interface-prefix=com.endlessm. \
+	--c-namespace Eks \
+	--generate-c-code search-provider/eks-metadata-provider-dbus \
+	$<
+
 search-provider/eks-search-provider-dbus.h search-provider/eks-search-provider-dbus.c: search-provider/eks-search-provider-dbus.xml Makefile.am
 	$(AM_V_GEN) $(MKDIR_P) $(@D) && \
 	$(GDBUS_CODEGEN) \
@@ -59,6 +67,7 @@ search-provider/eks-search-provider-dbus.h search-provider/eks-search-provider-d
 EXTRA_DIST += \
 	search-provider/eks-discovery-feed-provider-dbus.xml \
 	search-provider/eks-knowledge-app-dbus.xml \
+	search-provider/eks-metadata-provider-dbus.xml \
 	search-provider/eks-search-provider-dbus.xml \
 	$(NULL)
 
@@ -67,6 +76,8 @@ BUILT_SOURCES = \
 	search-provider/eks-discovery-feed-provider-dbus.c \
 	search-provider/eks-knowledge-app-dbus.h \
 	search-provider/eks-knowledge-app-dbus.c \
+	search-provider/eks-metadata-provider-dbus.h \
+	search-provider/eks-metadata-provider-dbus.c \
 	search-provider/eks-search-provider-dbus.h \
 	search-provider/eks-search-provider-dbus.c \
 	$(NULL)
@@ -80,6 +91,10 @@ eks_search_provider_v2_SOURCES = \
 	search-provider/eks-errors.h \
 	search-provider/eks-knowledge-app-dbus.c \
 	search-provider/eks-knowledge-app-dbus.h \
+	search-provider/eks-metadata-provider.c \
+	search-provider/eks-metadata-provider.h \
+	search-provider/eks-metadata-provider-dbus.c \
+	search-provider/eks-metadata-provider-dbus.h \
 	search-provider/eks-provider-iface.h \
 	search-provider/eks-provider-iface.c \
 	search-provider/eks-query-util.c \
