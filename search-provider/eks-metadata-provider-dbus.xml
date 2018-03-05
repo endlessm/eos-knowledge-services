@@ -1,0 +1,141 @@
+<!DOCTYPE node PUBLIC
+"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+
+<!--
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General
+ Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
+-->
+<node name="/" xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
+  <interface name="com.endlessm.ContentMetadata">
+    <!--
+        Query:
+        @Query: An array of dictionaries describing the queries to be made,
+                with the following optional parameters. Specifying any
+                parameter that is not a member of this list is an error.
+                No new parameters will be added or removed from this
+                interface during its lifetime.
+
+                "search-terms": A string (s) with the free-text search terms
+                                to use during the query. If the parameter
+                                is not specified, filtering will only
+                                be done against tags-match-any and tags-match-all.
+                "tags-match-any": A strv (as) with a list of tags that any
+                                  matching content objects must have at least
+                                  one of.
+                "tags-match-all": A strv (as) with a list of tags that any
+                                  matching content objects must have all of.
+                "limit": An integer indicating the number of results at most
+                         to return. If the parameter is not specifed there
+                         will be no limit.
+                "offset": An integer specifying the "offset" into the query
+                          results from the point which it start returning results.
+                          This also changes the index of the last result if "limit"
+                          was specified. For instance, if "offset" was 1 and
+                          "limit" was 5, then the 2nd to 6th results will
+                          be returned, inclusive.
+                "sort": A string specifying what the query should be sorted by,
+                        valid values are:
+
+                            "relevance": Sort by relevance ranking, with exact
+                                         title matches weighted most heavily.
+                            "sequence-number": Sort by article page ranking.
+                            "date": Sort by date of publication.
+                            "alphabetical" Sort alphabetically.
+
+                "order": A string specifying how sorted query results should
+                         be ordered, valid values are:
+
+                             "ascending": Least-ranked to most-ranked.
+                             "descending": Most-ranked to least-ranked.
+
+       Run a query against the database for this app.
+
+       Returns a tuple of @Shards and @Results.
+       @Shards: An array of strings indicating the file-paths where
+                shard packfiles are kept on the filesystem which contain
+                the actual data for results in the query. A call to Query
+                might return multiple shards, so if the client wants to look
+                up further information for a particular content object, they
+                will need to check every shard to see if it has that content.
+       @Results: An array of tuples of (result-metadata, models). The result
+                 tuples come back in the same order corresponding to the
+                 query dictionaries passed in @Query. If any one query fails
+                 the entire query operation fails.
+
+                 result-metadata a dictionary containing metadata about the
+                 result. New priperties may be added to these dictionaries
+                 during the course of the interface's lifetime, so callers
+                 should explicitly check if the property is present on the
+                 returned dictionary for each piece of content before attempting
+                 to use it, and if not, substituting a sensible default.
+
+                 "upper_bound": the number of models that would be returned
+                                in a search result if "limit" had not been
+                                applied.
+
+                 models is an array of dictionaries with metadata about each
+                 content object matched in the query. New properties may be
+                 added to these dictionaries during the course of this
+                 interface's lifetime, so callers should explicitly check if
+                 the property is present on the returned dictionary for each
+                 piece of content before attempting to use it, and if not,
+                 substitute a sensible default.
+
+                 "title": The title of the content object.
+                 "content_type": The MIME type of the underlying content data.
+                 "language": The language code of the content.
+                 "synopsis": A brief description of the content.
+                 "last_modified_date": Date (ISO8061) when the content was
+                                       last modified.
+                 "original_title": The original title this content had.
+                 "original_uri": The URI that this content was sourced from.
+                 "license": License for this content.
+                 "copyright_holder": Who holds the copyright for this content.
+                 "thumbnail_uri": An EKN ID specifying the location in one
+                                  of the returned shards where data for
+                                  the thumbnail for this content is stored.
+                 "ekn_id": An EKN ID specifying the location in one of the
+                           returned shards where data for this content is
+                           stored.
+                 "child_tags": If this content object model represents a
+                               set, the tags which should be queried as part
+                               of "tags-match-any" in Query above to find
+                               content objects inside this set.
+                 "tags": The tags for this content object model, which allow
+                         it to be associated with a set via "child_tags" or
+                         provide metadata about the type of content.
+                 "temporal-coverage": The dates this content covers.
+                 "discovery_feed_content": An opaque struct with content for
+                                           the discovery feed.
+    -->
+    <method name="Query">
+      <arg type="as" name="Shards" direction="out" />
+      <arg type="a(a{sv}aa{sv})" name="Results" direction="out" />
+      <arg type="aa{sv}" name="Query" direction="in" />
+    </method>
+    <!--
+        Shards:
+        Just return the location for the shards for this app without running
+        a query against its database. This is useful if the caller already
+        knows an EKN ID that they need to look up for an app and just needs
+        to know where its shard file is.
+
+        Returns @Shards: an array of strings with file paths for where the shard
+                         packfiles for this app are stored.
+    -->
+    <method name="Shards">
+      <arg type="as" name="Shards" direction="out" />
+    </method>
+  </interface>
+</node>
