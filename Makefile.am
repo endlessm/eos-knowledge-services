@@ -79,6 +79,8 @@ eks_search_provider_v1_SOURCES = \
 	search-provider/eks-knowledge-app-dbus.h \
 	search-provider/eks-provider-iface.h \
 	search-provider/eks-provider-iface.c \
+	search-provider/eks-query-util.c \
+	search-provider/eks-query-util.h \
 	search-provider/eks-search-app.c \
 	search-provider/eks-search-app.h \
 	search-provider/eks-search-main.c \

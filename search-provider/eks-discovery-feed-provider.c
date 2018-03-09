@@ -5,6 +5,7 @@
 
 #include "eks-knowledge-app-dbus.h"
 #include "eks-discovery-feed-provider-dbus.h"
+#include "eks-query-util.h"
 
 #include <eos-knowledge-content.h>
 #include <eos-shard/eos-shard-shard-file.h>
@@ -405,76 +406,6 @@ typedef enum {
   DISCOVERY_FEED_NO_CUSTOM_PROPS = 0,
   DISCOVERY_FEED_SET_CUSTOM_TITLE = 1 << 0
 } DiscoveryFeedCustomProps;
-
-static gboolean
-models_for_result (EkncEngine   *engine,
-                   const gchar  *application_id,
-                   GAsyncResult *result,
-                   GSList       **models,
-                   GError       **error)
-{
-  g_autoptr(EkncQueryResults) results = NULL;
-  if (!(results = eknc_engine_query_finish (engine, result, error)))
-      return FALSE;
-
-  EkncDomain *domain = eknc_engine_get_domain_for_app (engine,
-                                                       application_id,
-                                                       error);
-  if (domain == NULL)
-      return FALSE;
-
-  *models = g_slist_copy_deep (eknc_query_results_get_models (results),
-                               (GCopyFunc) g_object_ref,
-                               NULL);
-
-  return TRUE;
-}
-
-static gboolean
-models_and_shards_for_result (EkncEngine   *engine,
-                              const gchar  *application_id,
-                              GAsyncResult *result,
-                              GSList       **models,
-                              GSList       **shards,
-                              GError       **error)
-{
-  g_autoptr(EkncQueryResults) results = NULL;
-  if (!(results = eknc_engine_query_finish (engine, result, error)))
-      return FALSE;
-
-  EkncDomain *domain = eknc_engine_get_domain_for_app (engine,
-                                                       application_id,
-                                                       error);
-  if (domain == NULL)
-      return FALSE;
-
-  *shards = g_slist_copy_deep (eknc_domain_get_shards (domain),
-                               (GCopyFunc) g_object_ref,
-                               NULL);
-  *models = g_slist_copy_deep (eknc_query_results_get_models (results),
-                               (GCopyFunc) g_object_ref,
-                               NULL);
-
-  return TRUE;
-}
-
-GStrv
-strv_from_shard_list (GSList *string_list)
-{
-  GStrv strv = g_new0 (gchar *, g_slist_length (string_list));
-  guint count = 0;
-
-  for (GSList *l = string_list; l; l = l->next)
-    {
-      EosShardShardFile *shard = l->data;
-      gchar  *shard_path = NULL;
-
-      g_object_get (shard, "path", &shard_path, NULL);
-      strv[count++] = shard_path;
-    }
-
-  return strv;
-}
 
 typedef struct _QueryPendingUpperBound {
   EkncQueryObject     *query;
