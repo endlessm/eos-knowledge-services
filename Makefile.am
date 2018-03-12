@@ -76,6 +76,8 @@ eks_search_provider_v2_SOURCES = \
 	search-provider/eks-discovery-feed-provider.h \
 	search-provider/eks-discovery-feed-provider-dbus.c \
 	search-provider/eks-discovery-feed-provider-dbus.h \
+	search-provider/eks-errors.c \
+	search-provider/eks-errors.h \
 	search-provider/eks-knowledge-app-dbus.c \
 	search-provider/eks-knowledge-app-dbus.h \
 	search-provider/eks-provider-iface.h \
