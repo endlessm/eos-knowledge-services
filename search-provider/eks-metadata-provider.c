@@ -300,7 +300,7 @@ on_received_query_results (GObject      *source,
                                      &error))
     {
       g_dbus_method_invocation_take_error (state->invocation,
-                                           g_steal_pointer (&error));
+                                           eks_map_error_to_eks_error (error));
       g_slist_free_full (models, g_object_unref);
       g_slist_free_full (shards, g_object_unref);
       return;
@@ -674,7 +674,7 @@ handle_shards (EksContentMetadata    *skeleton,
   if (domain == NULL)
     {
       g_dbus_method_invocation_take_error (invocation,
-                                           g_steal_pointer (&error));
+                                           eks_map_error_to_eks_error (error));
       return TRUE;
     }
 
