@@ -644,7 +644,6 @@ handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
     const char *tags_match_any[] = { "EknArticleObject", NULL };
-    const char *tags_match_all[] = { "EknHasDiscoveryFeedTitle", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -654,7 +653,6 @@ handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
                                                 "tags-match-any", tags_match_any,
-                                                "tags-match-all", tags_match_all,
                                                 "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                 "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                 "limit", NUMBER_OF_ARTICLES,
