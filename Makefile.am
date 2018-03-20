@@ -32,14 +32,6 @@ service_DATA = \
 	search-provider/com.endlessm.EknServices2.SearchProviderV2.service \
 	$(NULL)
 
-search-provider/eks-search-provider-dbus.h search-provider/eks-search-provider-dbus.c: search-provider/eks-search-provider-dbus.xml Makefile.am
-	$(AM_V_GEN) $(MKDIR_P) $(@D) && \
-	$(GDBUS_CODEGEN) \
-	--interface-prefix=org.gnome.Shell \
-	--c-namespace Eks \
-	--generate-c-code search-provider/eks-search-provider-dbus \
-	$<
-
 search-provider/eks-discovery-feed-provider-dbus.h search-provider/eks-discovery-feed-provider-dbus.c: search-provider/eks-discovery-feed-provider-dbus.xml Makefile.am
 	$(AM_V_GEN) $(MKDIR_P) $(@D) && \
 	$(GDBUS_CODEGEN) \
@@ -56,19 +48,27 @@ search-provider/eks-knowledge-app-dbus.h search-provider/eks-knowledge-app-dbus.
 	--generate-c-code search-provider/eks-knowledge-app-dbus \
 	$<
 
+search-provider/eks-search-provider-dbus.h search-provider/eks-search-provider-dbus.c: search-provider/eks-search-provider-dbus.xml Makefile.am
+	$(AM_V_GEN) $(MKDIR_P) $(@D) && \
+	$(GDBUS_CODEGEN) \
+	--interface-prefix=org.gnome.Shell \
+	--c-namespace Eks \
+	--generate-c-code search-provider/eks-search-provider-dbus \
+	$<
+
 EXTRA_DIST += \
-	search-provider/eks-search-provider-dbus.xml \
 	search-provider/eks-discovery-feed-provider-dbus.xml \
 	search-provider/eks-knowledge-app-dbus.xml \
+	search-provider/eks-search-provider-dbus.xml \
 	$(NULL)
 
 BUILT_SOURCES = \
-	search-provider/eks-search-provider-dbus.h \
-	search-provider/eks-search-provider-dbus.c \
 	search-provider/eks-discovery-feed-provider-dbus.h \
 	search-provider/eks-discovery-feed-provider-dbus.c \
 	search-provider/eks-knowledge-app-dbus.h \
 	search-provider/eks-knowledge-app-dbus.c \
+	search-provider/eks-search-provider-dbus.h \
+	search-provider/eks-search-provider-dbus.c \
 	$(NULL)
 
 eks_search_provider_v2_SOURCES = \
