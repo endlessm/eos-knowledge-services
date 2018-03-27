@@ -1,0 +1,84 @@
+{
+    "app-id": "com.endlessm.MultiEknServices",
+    "branch": "@BRANCH@",
+    "runtime": "com.endlessm.apps.Platform",
+    "runtime-version": "3",
+    "sdk": "com.endlessm.apps.Sdk",
+    "finish-args": [
+        "--filesystem=/var/lib/flatpak:ro",
+        "--filesystem=/var/endless-extra/flatpak:ro",
+        "--filesystem=~/.local/share/flatpak:ro",
+        "--share=network",
+        "--socket=session-bus"
+    ],
+    "add-extensions": {
+        "com.endlessm.Platform": {
+            "directory": "sdk/0",
+            "no-autodownload": true,
+            "versions": "eos3.2;eos3.1;eos3.0"
+        },
+        "com.endlessm.apps.Platform@1": {
+            "directory": "sdk/1",
+            "no-autodownload": true,
+            "version": "1"
+        },
+        "com.endlessm.apps.Platform@2": {
+            "directory": "sdk/2",
+            "no-autodownload": true,
+            "version": "2"
+        },
+        "com.endlessm.apps.Platform@3": {
+            "directory": "sdk/3",
+            "no-autodownload": true,
+            "version": "3"
+        }
+    },
+    "modules": [
+        {
+            "name": "eos-knowledge-services-multiplexer",
+            "config-opts": [
+                "--enable-multi-services",
+                "--disable-dbus-service"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "path": ".",
+                    "branch": "@GIT_CLONE_BRANCH@"
+                }
+            ]
+        },
+        {
+            "name": "eos-knowledge-services-v1",
+            "config-opts": ["--prefix=/app/eos-knowledge-services/1"],
+            "sources": [
+                {
+                    "type": "git",
+                    "path": ".",
+                    "branch": "origin/eos3"
+                }
+            ]
+        },
+        {
+            "name": "eos-knowledge-services-v2",
+            "config-opts": ["--prefix=/app/eos-knowledge-services/2"],
+            "sources": [
+                {
+                    "type": "git",
+                    "path": ".",
+                    "branch": "origin/master"
+                }
+            ]
+        },
+        {
+            "name": "multi-eos-knowledge-services-directories",
+            "buildsystem": "simple",
+            "build-commands": [
+                "mkdir -p /app/sdk/0",
+                "mkdir -p /app/sdk/1",
+                "mkdir -p /app/sdk/2",
+                "mkdir -p /app/sdk/3"
+            ]
+        }
+    ]
+}
