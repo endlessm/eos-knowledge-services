@@ -1,3 +1,3 @@
 [D-BUS Service]
 Name=com.endlessm.EknServices2.SearchProviderV2
-Exec=%bindir%/eks-search-provider-v2
+Exec=%bindir%/eks-multi-services-dispatcher --services-version 2
