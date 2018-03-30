@@ -1,5 +1,6 @@
 {
     "app-id": "com.endlessm.EknServices",
+    "branch": "@BRANCH@",
     "runtime": "com.endlessm.apps.Platform",
     "runtime-version": "1",
     "sdk": "com.endlessm.apps.Sdk",
@@ -19,7 +20,7 @@
                 {
                     "type": "git",
                     "url": ".",
-                    "branch": "@BRANCH@"
+                    "branch": "@GIT_CLONE_BRANCH@"
                 }
             ]
         }
