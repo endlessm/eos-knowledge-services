@@ -13,6 +13,14 @@
         "--share=network",
         "--socket=session-bus"
     ],
+    "add-extensions": {
+        "com.endlessm.EknServices.Extension": {
+            "directory": "build/eos-knowledge-services/1",
+            "bundle": true,
+            "autodelete": true,
+            "no-autodownload": true
+        }
+    },
     "modules": [
         {
             "name": "eos-knowledge-services",
@@ -22,6 +30,16 @@
                     "url": ".",
                     "branch": "@GIT_CLONE_BRANCH@"
                 }
+            ]
+        },
+        {
+            "name": "eos-knowledge-services-extension",
+            "buildsystem": "simple",
+            "build-commands": [
+                "mkdir -p /app/build/eos-knowledge-services/1",
+                "cp -r /app/bin /app/build/eos-knowledge-services/1",
+                "cp -r /app/lib /app/build/eos-knowledge-services/1",
+                "cp -r /app/share /app/build/eos-knowledge-services/1"
             ]
         }
     ]
