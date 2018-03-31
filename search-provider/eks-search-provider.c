@@ -6,8 +6,9 @@
 #include "eks-provider-iface.h"
 #include "eks-search-provider-dbus.h"
 
-#include <eos-knowledge-content.h>
 #include <string.h>
+
+#include <dmodel.h>
 
 #define RESULTS_LIMIT 5
 #define MAX_DESCRIPTION_LENGTH 200
@@ -30,7 +31,7 @@ struct _EksSearchProvider
   EksSearchProvider2 *skeleton;
   EksKnowledgeSearch *app_proxy;
   GCancellable *cancellable;
-  // Hash table with ekn id string keys, EkncContentObjectModel values
+  // Hash table with ekn id string keys, DmContent values
   GHashTable *object_cache;
 };
 
@@ -171,27 +172,27 @@ search_finished (GObject *source,
                  GAsyncResult *result,
                  gpointer user_data)
 {
-  EkncEngine *engine = EKNC_ENGINE (source);
+  DmEngine *engine = DM_ENGINE (source);
   SearchState *state = user_data;
 
   g_application_release (g_application_get_default ());
 
   GError *error = NULL;
-  g_autoptr(EkncQueryResults) results = NULL;
-  if (!(results = eknc_engine_query_finish (engine, result, &error)))
+  g_autoptr(DmQueryResults) results = NULL;
+  if (!(results = dm_engine_query_finish (engine, result, &error)))
     {
       g_dbus_method_invocation_return_gerror (state->invocation, error);
       search_state_free (state);
       return;
     }
 
-  GSList *models = eknc_query_results_get_models (results);
+  GSList *models = dm_query_results_get_models (results);
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("as"));
   for (GSList *l = models; l; l = l->next)
     {
-      EkncContentObjectModel *model = l->data;
+      DmContent *model = l->data;
       g_autofree gchar *ekn_id = NULL;
       g_object_get (model, "ekn-id", &ekn_id, NULL);
       g_hash_table_insert (state->self->object_cache, g_strdup (ekn_id), g_object_ref (model));
@@ -224,17 +225,17 @@ do_search (EksSearchProvider *self,
   const char *tags_match_any[] = { "EknArticleObject", NULL };
 
   self->cancellable = g_cancellable_new ();
-  g_autoptr(EkncQueryObject) query_obj = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                        "search-terms", search_terms,
-                                                        "limit", RESULTS_LIMIT,
-                                                        "app-id", self->application_id,
-                                                        "tags-match-any", tags_match_any,
-                                                        NULL);
+  g_autoptr(DmQuery) query_obj = g_object_new (DM_TYPE_QUERY,
+                                               "search-terms", search_terms,
+                                               "limit", RESULTS_LIMIT,
+                                               "app-id", self->application_id,
+                                               "tags-match-any", tags_match_any,
+                                               NULL);
   SearchState *state = g_slice_new0 (SearchState);
   state->self = self;
   state->invocation = g_object_ref (invocation);
-  eknc_engine_query (eknc_engine_get_default (), query_obj, self->cancellable,
-                     search_finished, state);
+  dm_engine_query (dm_engine_get_default (), query_obj, self->cancellable,
+                   search_finished, state);
 }
 
 static gboolean
@@ -270,7 +271,7 @@ handle_get_result_metas (EksSearchProvider2 *skeleton,
   guint length = g_strv_length (results);
   for (guint i = 0; i < length; i++)
     {
-      EkncContentObjectModel *model = g_hash_table_lookup (self->object_cache, results[i]);
+      DmContent *model = g_hash_table_lookup (self->object_cache, results[i]);
       if (model == NULL)
         continue;
 

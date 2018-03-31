@@ -7,7 +7,7 @@
 #include "eks-discovery-feed-provider-dbus.h"
 #include "eks-query-util.h"
 
-#include <eos-knowledge-content.h>
+#include <dmodel.h>
 #include <eos-shard/eos-shard-shard-file.h>
 
 #include <stdio.h>
@@ -172,9 +172,9 @@ add_key_value_pair_to_variant (GVariantBuilder *builder,
 }
 
 static void
-add_key_value_pair_from_model_to_variant (EkncContentObjectModel *model,
-                                          GVariantBuilder        *builder,
-                                          const char             *key)
+add_key_value_pair_from_model_to_variant (DmContent       *model,
+                                          GVariantBuilder *builder,
+                                          const char      *key)
 {
   g_autofree gchar *value = NULL;
   g_autofree gchar *underscore_key = underscorify (key);
@@ -183,9 +183,9 @@ add_key_value_pair_from_model_to_variant (EkncContentObjectModel *model,
 }
 
 static void
-add_key_value_int_to_str_pair_from_model_to_variant (EkncContentObjectModel *model,
-                                                     GVariantBuilder        *builder,
-                                                     const char             *key)
+add_key_value_int_to_str_pair_from_model_to_variant (DmContent       *model,
+                                                     GVariantBuilder *builder,
+                                                     const char      *key)
 {
   gint value;
   g_autofree gchar *str_value = malloc (sizeof (gchar) * 8);
@@ -196,10 +196,10 @@ add_key_value_int_to_str_pair_from_model_to_variant (EkncContentObjectModel *mod
 }
 
 static void
-add_first_string_value_from_model_to_variant (EkncContentObjectModel *model,
-                                              GVariantBuilder        *builder,
-                                              const char             *model_key,
-                                              const char             *key)
+add_first_string_value_from_model_to_variant (DmContent       *model,
+                                              GVariantBuilder *builder,
+                                              const char      *model_key,
+                                              const char      *key)
 {
   g_auto(GStrv) values;
   g_autofree gchar *underscore_key = underscorify (key);
@@ -243,7 +243,7 @@ typedef enum {
 } DiscoveryFeedCustomProps;
 
 typedef struct _QueryPendingUpperBound {
-  EkncQueryObject       *query;
+  DmQuery               *query;
   guint                 offset_within_upper_bound;
   guint                 wraparound_upper_bound;
   GCancellable          *cancellable;
@@ -254,7 +254,7 @@ typedef struct _QueryPendingUpperBound {
 } QueryPendingUpperBound;
 
 static QueryPendingUpperBound *
-query_pending_upper_bound_new (EkncQueryObject       *query,
+query_pending_upper_bound_new (DmQuery               *query,
                                guint                  offset_within_upper_bound,
                                guint                  wraparound_upper_bound,
                                GDBusMethodInvocation *invocation,
@@ -296,11 +296,11 @@ on_received_upper_bound_result (GObject      *source,
                                 GAsyncResult *result,
                                 gpointer     user_data)
 {
-  EkncEngine *engine = EKNC_ENGINE (source);
+  DmEngine *engine = DM_ENGINE (source);
   g_autoptr(QueryPendingUpperBound) pending = user_data;
   g_autoptr(GError) error = NULL;
 
-  g_autoptr(EkncQueryResults) results = eknc_engine_query_finish (engine, result, &error);
+  g_autoptr(DmQueryResults) results = dm_engine_query_finish (engine, result, &error);
 
   if (error != NULL)
     {
@@ -318,24 +318,22 @@ on_received_upper_bound_result (GObject      *source,
    * determine the actual offset */
   guint intended_limit;
   g_object_get (pending->query, "limit", &intended_limit, NULL);
-  gint upper_bound = eknc_query_results_get_upper_bound (results);
+  int upper_bound = dm_query_results_get_upper_bound (results);
   guint offset = pending->offset_within_upper_bound % (MIN (upper_bound,
                                                             pending->wraparound_upper_bound) -
                                                        intended_limit);
 
   /* Get rid of the old query and construct a new one in its place */
-  EkncQueryObject *query = eknc_query_object_new_from_object (pending->query,
-                                                              "offset", offset,
-                                                              NULL);
+  DmQuery *query = dm_query_new_from_object (pending->query,
+                                             "offset", offset,
+                                             NULL);
   g_set_object (&pending->query, query);
 
   /* Okay, now fire off the *actual* query, passing the user data
    * and callback that we were going to pass the first time */
-  eknc_engine_query (engine,
-                     pending->query,
-                     pending->cancellable,
-                     pending->main_query_ready_callback,
-                     g_steal_pointer (&pending->main_query_ready_data));
+  dm_engine_query (engine, pending->query, pending->cancellable,
+                   pending->main_query_ready_callback,
+                   g_steal_pointer (&pending->main_query_ready_data));
 }
 
 /* This function executes the given query with an offset computed
@@ -349,8 +347,8 @@ on_received_upper_bound_result (GObject      *source,
  * in the limit parameter to the query
  */
 static void
-query_with_wraparound_offset (EkncEngine            *engine,
-                              EkncQueryObject       *query,
+query_with_wraparound_offset (DmEngine              *engine,
+                              DmQuery               *query,
                               guint                  offset_within_upper_bound,
                               guint                  wraparound_upper_bound,
                               GDBusMethodInvocation *invocation,
@@ -363,24 +361,22 @@ query_with_wraparound_offset (EkncEngine            *engine,
    * nothing back, but Xapian will tell us how many models matched our query
    * which we'll use later. We have to ask for at least one article
    * here, otherwise we trigger assertions in knowledge-lib. */
-  g_autoptr (EkncQueryObject) truncated_query = eknc_query_object_new_from_object (query,
-                                                                                   "limit", 1,
-                                                                                   NULL);
+  g_autoptr(DmQuery) truncated_query = dm_query_new_from_object (query,
+                                                                 "limit", 1,
+                                                                 NULL);
 
   /* Dispatch the query, when it comes back we'll know what to
    * set the offset to */
-  eknc_engine_query (engine,
-                     truncated_query,
-                     cancellable,
-                     on_received_upper_bound_result,
-                     query_pending_upper_bound_new (query,
-                                                    offset_within_upper_bound,
-                                                    wraparound_upper_bound,
-                                                    invocation,
-                                                    cancellable,
-                                                    main_query_ready_callback,
-                                                    main_query_ready_data,
-                                                    main_query_ready_destroy));
+  dm_engine_query (engine, truncated_query, cancellable,
+                   on_received_upper_bound_result,
+                   query_pending_upper_bound_new (query,
+                                                  offset_within_upper_bound,
+                                                  wraparound_upper_bound,
+                                                  invocation,
+                                                  cancellable,
+                                                  main_query_ready_callback,
+                                                  main_query_ready_data,
+                                                  main_query_ready_destroy));
 }
 
 static void
@@ -388,7 +384,7 @@ artwork_card_descriptions_cb (GObject *source,
                               GAsyncResult *result,
                               gpointer user_data)
 {
-  EkncEngine *engine = EKNC_ENGINE (source);
+  DmEngine *engine = DM_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
 
   g_application_release (g_application_get_default ());
@@ -422,7 +418,7 @@ artwork_card_descriptions_cb (GObject *source,
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-      EkncContentObjectModel *model = l->data;
+      DmContent *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
 
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
@@ -452,7 +448,7 @@ handle_artwork_card_descriptions (EksDiscoveryFeedProvider *skeleton,
                                   gpointer                  user_data)
 {
     EksDiscoveryFeedProvider *self = user_data;
-    EkncEngine *engine = eknc_engine_get_default ();
+    DmEngine *engine = dm_engine_get_default ();
     const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
@@ -461,10 +457,10 @@ handle_artwork_card_descriptions (EksDiscoveryFeedProvider *skeleton,
 
     /* Create query and run it */
     query_with_wraparound_offset (engine,
-                                  g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                  g_object_new (DM_TYPE_QUERY,
                                                 "tags-match-any", tags_match_any,
-                                                "sort", EKNC_QUERY_OBJECT_SORT_DATE,
-                                                "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
+                                                "sort", DM_QUERY_SORT_DATE,
+                                                "order", DM_QUERY_ORDER_DESCENDING,
                                                 "limit", NUMBER_OF_ARTICLES,
                                                 "app-id", self->application_id,
                                                 NULL),
@@ -484,7 +480,7 @@ content_article_card_descriptions_cb (GObject *source,
                                       GAsyncResult *result,
                                       gpointer user_data)
 {
-  EkncEngine *engine = EKNC_ENGINE (source);
+  DmEngine *engine = DM_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
 
   g_application_release (g_application_get_default ());
@@ -518,7 +514,7 @@ content_article_card_descriptions_cb (GObject *source,
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-      EkncContentObjectModel *model = l->data;
+      DmContent *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
 
       /* Examine the discovery-feed-content string first and set flags
@@ -573,7 +569,7 @@ handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
                                           gpointer                  user_data)
 {
     EksDiscoveryFeedProvider *self = user_data;
-    EkncEngine *engine = eknc_engine_get_default ();
+    DmEngine *engine = dm_engine_get_default ();
     const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
@@ -582,10 +578,10 @@ handle_content_article_card_descriptions (EksDiscoveryFeedProvider *skeleton,
 
     /* Create query and run it */
     query_with_wraparound_offset (engine,
-                                  g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                  g_object_new (DM_TYPE_QUERY,
                                                 "tags-match-any", tags_match_any,
-                                                "sort", EKNC_QUERY_OBJECT_SORT_DATE,
-                                                "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
+                                                "sort", DM_QUERY_SORT_DATE,
+                                                "order", DM_QUERY_ORDER_DESCENDING,
                                                 "limit", NUMBER_OF_ARTICLES,
                                                 "app-id", self->application_id,
                                                 NULL),
@@ -606,7 +602,7 @@ get_word_of_the_day_content_cb (GObject *source,
                                 GAsyncResult *result,
                                 gpointer user_data)
 {
-  EkncEngine *engine = EKNC_ENGINE (source);
+  DmEngine *engine = DM_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
 
   g_application_release (g_application_get_default ());
@@ -628,7 +624,7 @@ get_word_of_the_day_content_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-  EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
+  DmContent *model = g_slist_nth (models, 0)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "word");
   add_key_value_pair_from_model_to_variant (model, &builder, "definition");
@@ -648,7 +644,7 @@ handle_get_word_of_the_day (EksDiscoveryFeedProvider *skeleton,
                             gpointer                  user_data)
 {
     EksDiscoveryFeedProvider *self = user_data;
-    EkncEngine *engine = eknc_engine_get_default ();
+    DmEngine *engine = dm_engine_get_default ();
     const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
@@ -657,7 +653,7 @@ handle_get_word_of_the_day (EksDiscoveryFeedProvider *skeleton,
 
     /* Create query and run it */
     query_with_wraparound_offset (engine,
-                                  g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                  g_object_new (DM_TYPE_QUERY,
                                                 "tags-match-any", tags_match_any,
                                                 "limit", 1,
                                                 "app-id", self->application_id,
@@ -678,7 +674,7 @@ get_quote_of_the_day_content_cb (GObject *source,
                                  GAsyncResult *result,
                                  gpointer user_data)
 {
-  EkncEngine *engine = EKNC_ENGINE (source);
+  DmEngine *engine = DM_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
 
   g_application_release (g_application_get_default ());
@@ -700,7 +696,7 @@ get_quote_of_the_day_content_cb (GObject *source,
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-  EkncContentObjectModel *model = g_slist_nth (models, 0)->data;
+  DmContent *model = g_slist_nth (models, 0)->data;
 
   add_key_value_pair_from_model_to_variant (model, &builder, "title");
   add_first_string_value_from_model_to_variant (model, &builder, "authors", "author");
@@ -719,7 +715,7 @@ handle_get_quote_of_the_day (EksDiscoveryFeedProvider *skeleton,
                              gpointer                  user_data)
 {
     EksDiscoveryFeedProvider *self = user_data;
-    EkncEngine *engine = eknc_engine_get_default ();
+    DmEngine *engine = dm_engine_get_default ();
     const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
@@ -728,7 +724,7 @@ handle_get_quote_of_the_day (EksDiscoveryFeedProvider *skeleton,
 
     /* Create query and run it */
     query_with_wraparound_offset (engine,
-                                  g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                  g_object_new (DM_TYPE_QUERY,
                                                 "tags-match-any", tags_match_any,
                                                 "limit", 1,
                                                 "app-id", self->application_id,
@@ -749,7 +745,7 @@ recent_news_articles_cb (GObject *source,
                          GAsyncResult *result,
                          gpointer user_data)
 {
-  EkncEngine *engine = EKNC_ENGINE (source);
+  DmEngine *engine = DM_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
 
   g_application_release (g_application_get_default ());
@@ -782,7 +778,7 @@ recent_news_articles_cb (GObject *source,
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-      EkncContentObjectModel *model = l->data;
+      DmContent *model = l->data;
 
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
       add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
@@ -808,27 +804,24 @@ handle_get_recent_news (EksDiscoveryFeedProvider *skeleton,
                         gpointer                  user_data)
 {
     EksDiscoveryFeedProvider *self = user_data;
-    EkncEngine *engine = eknc_engine_get_default ();
+    DmEngine *engine = dm_engine_get_default ();
     const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Create query and run it */
-    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
-                                                     "sort", EKNC_QUERY_OBJECT_SORT_DATE,
-                                                     "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
-                                                     "limit", NUMBER_OF_ARTICLES,
-                                                     "app-id", self->application_id,
-                                                     NULL);
+    g_autoptr(DmQuery) query = g_object_new (DM_TYPE_QUERY,
+                                             "tags-match-any", tags_match_any,
+                                             "sort", DM_QUERY_SORT_DATE,
+                                             "order", DM_QUERY_ORDER_DESCENDING,
+                                             "limit", NUMBER_OF_ARTICLES,
+                                             "app-id", self->application_id,
+                                             NULL);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
     g_application_hold (g_application_get_default ());
 
-    eknc_engine_query (engine,
-                       query,
-                       self->cancellable,
-                       recent_news_articles_cb,
-                       discovery_feed_query_state_new (invocation, self));
+    dm_engine_query (engine, query, self->cancellable, recent_news_articles_cb,
+                     discovery_feed_query_state_new (invocation, self));
 
     return TRUE;
 }
@@ -838,7 +831,7 @@ relevant_video_cb (GObject *source,
                    GAsyncResult *result,
                    gpointer user_data)
 {
-  EkncEngine *engine = EKNC_ENGINE (source);
+  DmEngine *engine = DM_ENGINE (source);
   DiscoveryFeedQueryState *state = user_data;
 
   g_application_release (g_application_get_default ());
@@ -869,13 +862,13 @@ relevant_video_cb (GObject *source,
   gint videos_found = 0;
   for (GSList *l = models; l; l = l->next)
     {
-      if (!EKNC_IS_VIDEO_OBJECT_MODEL (l->data))
+      if (!DM_IS_VIDEO (l->data))
         continue;
 
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-      EkncContentObjectModel *model = l->data;
+      DmContent *model = l->data;
 
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
       add_key_value_int_to_str_pair_from_model_to_variant (model, &builder, "duration");
@@ -904,27 +897,24 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
                    gpointer                  user_data)
 {
     EksDiscoveryFeedProvider *self = user_data;
-    EkncEngine *engine = eknc_engine_get_default ();
+    DmEngine *engine = dm_engine_get_default ();
     const char *tags_match_any[] = { "EknMediaObject", NULL };
 
     /* Create query and run it */
-    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
-                                                     "sort", EKNC_QUERY_OBJECT_SORT_DATE,
-                                                     "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
-                                                     "limit", SENSIBLE_QUERY_LIMIT,
-                                                     "app-id", self->application_id,
-                                                     NULL);
+    g_autoptr(DmQuery) query = g_object_new (DM_TYPE_QUERY,
+                                             "tags-match-any", tags_match_any,
+                                             "sort", DM_QUERY_SORT_DATE,
+                                             "order", DM_QUERY_ORDER_DESCENDING,
+                                             "limit", SENSIBLE_QUERY_LIMIT,
+                                             "app-id", self->application_id,
+                                             NULL);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
     g_application_hold (g_application_get_default ());
 
-    eknc_engine_query (engine,
-                       query,
-                       self->cancellable,
-                       relevant_video_cb,
-                       discovery_feed_query_state_new (invocation, self));
+    dm_engine_query (engine, query, self->cancellable, relevant_video_cb,
+                     discovery_feed_query_state_new (invocation, self));
 
     return TRUE;
 }

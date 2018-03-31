@@ -39,9 +39,8 @@ PKG_PROG_PKG_CONFIG
 # Needed for implementing dbus interfaces in C
 AC_SUBST([GDBUS_CODEGEN], [`$PKG_CONFIG --variable gdbus_codegen gio-2.0`])
 
-# We need the eos-knowledge-content library
 PKG_CHECK_MODULES([SEARCH_PROVIDER], [
-    eos-knowledge-content-0
+    dmodel-0
     gio-2.0
     glib-2.0
     gobject-2.0
