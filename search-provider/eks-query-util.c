@@ -12,6 +12,7 @@ models_for_result (EkncEngine    *engine,
                    const char    *application_id,
                    GAsyncResult  *result,
                    GSList       **models,
+                   gint          *upper_bound,
                    GError       **error)
 {
   g_autoptr(EkncQueryResults) results = NULL;
@@ -24,9 +25,13 @@ models_for_result (EkncEngine    *engine,
   if (domain == NULL)
       return FALSE;
 
-  *models = g_slist_copy_deep (eknc_query_results_get_models (results),
-                               (GCopyFunc) g_object_ref,
-                               NULL);
+  if (models != NULL)
+    *models = g_slist_copy_deep (eknc_query_results_get_models (results),
+                                 (GCopyFunc) g_object_ref,
+                                 NULL);
+
+  if (upper_bound != NULL)
+    *upper_bound = eknc_query_results_get_upper_bound (results);
 
   return TRUE;
 }
@@ -37,6 +42,7 @@ models_and_shards_for_result (EkncEngine    *engine,
                               GAsyncResult  *result,
                               GSList       **models,
                               GSList       **shards,
+                              gint          *upper_bound,
                               GError       **error)
 {
   g_autoptr(EkncQueryResults) results = NULL;
@@ -49,12 +55,18 @@ models_and_shards_for_result (EkncEngine    *engine,
   if (domain == NULL)
       return FALSE;
 
-  *shards = g_slist_copy_deep (eknc_domain_get_shards (domain),
-                               (GCopyFunc) g_object_ref,
-                               NULL);
-  *models = g_slist_copy_deep (eknc_query_results_get_models (results),
-                               (GCopyFunc) g_object_ref,
-                               NULL);
+  if (shards != NULL)
+    *shards = g_slist_copy_deep (eknc_domain_get_shards (domain),
+                                 (GCopyFunc) g_object_ref,
+                                 NULL);
+
+  if (models != NULL)
+    *models = g_slist_copy_deep (eknc_query_results_get_models (results),
+                                 (GCopyFunc) g_object_ref,
+                                 NULL);
+
+  if (upper_bound != NULL)
+    *upper_bound = eknc_query_results_get_upper_bound (results);
 
   return TRUE;
 }
