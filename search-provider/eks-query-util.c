@@ -12,6 +12,7 @@ models_for_result (DmEngine      *engine,
                    const char    *application_id,
                    GAsyncResult  *result,
                    GSList       **models,
+                   gint          *upper_bound,
                    GError       **error)
 {
   g_autoptr(DmQueryResults) results = NULL;
@@ -23,9 +24,13 @@ models_for_result (DmEngine      *engine,
   if (domain == NULL)
       return FALSE;
 
-  *models = g_slist_copy_deep (dm_query_results_get_models (results),
-                               (GCopyFunc) g_object_ref,
-                               NULL);
+  if (models != NULL)
+    *models = g_slist_copy_deep (dm_query_results_get_models (results),
+                                 (GCopyFunc) g_object_ref,
+                                 NULL);
+
+  if (upper_bound != NULL)
+    *upper_bound = dm_query_results_get_upper_bound (results);
 
   return TRUE;
 }
@@ -36,6 +41,7 @@ models_and_shards_for_result (DmEngine    *engine,
                               GAsyncResult  *result,
                               GSList       **models,
                               GSList       **shards,
+                              gint          *upper_bound,
                               GError       **error)
 {
   g_autoptr(DmQueryResults) results = NULL;
@@ -47,12 +53,18 @@ models_and_shards_for_result (DmEngine    *engine,
   if (domain == NULL)
       return FALSE;
 
-  *shards = g_slist_copy_deep (dm_domain_get_shards (domain),
-                               (GCopyFunc) g_object_ref,
-                               NULL);
-  *models = g_slist_copy_deep (dm_query_results_get_models (results),
-                               (GCopyFunc) g_object_ref,
-                               NULL);
+  if (shards != NULL)
+    *shards = g_slist_copy_deep (dm_domain_get_shards (domain),
+                                 (GCopyFunc) g_object_ref,
+                                 NULL);
+
+  if (models != NULL)
+    *models = g_slist_copy_deep (dm_query_results_get_models (results),
+                                 (GCopyFunc) g_object_ref,
+                                 NULL);
+
+  if (upper_bound != NULL)
+    *upper_bound = dm_query_results_get_upper_bound (results);
 
   return TRUE;
 }
