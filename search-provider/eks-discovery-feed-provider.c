@@ -550,6 +550,7 @@ artwork_card_descriptions_cb (GObject *source,
                                      result,
                                      &models,
                                      &shards,
+                                     NULL,
                                      &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
@@ -690,6 +691,7 @@ content_article_card_descriptions_cb (GObject *source,
                                      result,
                                      &models,
                                      &shards,
+                                     NULL,
                                      &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
@@ -832,6 +834,7 @@ get_word_of_the_day_content_cb (GObject *source,
                           state->provider->application_id,
                           result,
                           &models,
+                          NULL,
                           &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
@@ -911,6 +914,7 @@ get_quote_of_the_day_content_cb (GObject *source,
                           state->provider->application_id,
                           result,
                           &models,
+                          NULL,
                           &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
@@ -991,6 +995,7 @@ recent_news_articles_cb (GObject *source,
                                      result,
                                      &models,
                                      &shards,
+                                     NULL,
                                      &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
@@ -1089,6 +1094,7 @@ relevant_video_cb (GObject *source,
                                      result,
                                      &models,
                                      &shards,
+                                     NULL,
                                      &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
