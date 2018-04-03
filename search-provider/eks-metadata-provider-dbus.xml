@@ -74,7 +74,7 @@
                  the entire query operation fails.
 
                  result-metadata a dictionary containing metadata about the
-                 result. New priperties may be added to these dictionaries
+                 result. New properties may be added to these dictionaries
                  during the course of the interface's lifetime, so callers
                  should explicitly check if the property is present on the
                  returned dictionary for each piece of content before attempting
