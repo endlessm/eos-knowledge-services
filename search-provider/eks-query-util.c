@@ -2,29 +2,28 @@
 
 #include "eks-query-util.h"
 
-#include <eos-knowledge-content.h>
+#include <dmodel.h>
 #include <eos-shard/eos-shard-shard-file.h>
 
 #include <gio/gio.h>
 
 gboolean
-models_for_result (EkncEngine    *engine,
+models_for_result (DmEngine      *engine,
                    const char    *application_id,
                    GAsyncResult  *result,
                    GSList       **models,
                    GError       **error)
 {
-  g_autoptr(EkncQueryResults) results = NULL;
-  if (!(results = eknc_engine_query_finish (engine, result, error)))
+  g_autoptr(DmQueryResults) results = NULL;
+  if (!(results = dm_engine_query_finish (engine, result, error)))
       return FALSE;
 
-  EkncDomain *domain = eknc_engine_get_domain_for_app (engine,
-                                                       application_id,
-                                                       error);
+  DmDomain *domain = dm_engine_get_domain_for_app (engine, application_id,
+                                                   error);
   if (domain == NULL)
       return FALSE;
 
-  *models = g_slist_copy_deep (eknc_query_results_get_models (results),
+  *models = g_slist_copy_deep (dm_query_results_get_models (results),
                                (GCopyFunc) g_object_ref,
                                NULL);
 
@@ -32,27 +31,26 @@ models_for_result (EkncEngine    *engine,
 }
 
 gboolean
-models_and_shards_for_result (EkncEngine    *engine,
+models_and_shards_for_result (DmEngine    *engine,
                               const char    *application_id,
                               GAsyncResult  *result,
                               GSList       **models,
                               GSList       **shards,
                               GError       **error)
 {
-  g_autoptr(EkncQueryResults) results = NULL;
-  if (!(results = eknc_engine_query_finish (engine, result, error)))
+  g_autoptr(DmQueryResults) results = NULL;
+  if (!(results = dm_engine_query_finish (engine, result, error)))
       return FALSE;
 
-  EkncDomain *domain = eknc_engine_get_domain_for_app (engine,
-                                                       application_id,
-                                                       error);
+  DmDomain *domain = dm_engine_get_domain_for_app (engine, application_id,
+                                                   error);
   if (domain == NULL)
       return FALSE;
 
-  *shards = g_slist_copy_deep (eknc_domain_get_shards (domain),
+  *shards = g_slist_copy_deep (dm_domain_get_shards (domain),
                                (GCopyFunc) g_object_ref,
                                NULL);
-  *models = g_slist_copy_deep (eknc_query_results_get_models (results),
+  *models = g_slist_copy_deep (dm_query_results_get_models (results),
                                (GCopyFunc) g_object_ref,
                                NULL);
 

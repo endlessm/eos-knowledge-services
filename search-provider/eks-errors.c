@@ -1,8 +1,7 @@
 /* Copyright 2018 Endless Mobile, Inc. */
 
+#include <dmodel.h>
 #include <gio/gio.h>
-
-#include <eos-knowledge-content.h>
 
 #include "eks-errors.h"
 
@@ -10,45 +9,39 @@ GError *
 eks_map_error_to_eks_error (const GError *error)
 {
   if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND) ||
-      g_error_matches (error, EKNC_DOMAIN_ERROR, EKNC_DOMAIN_ERROR_PATH_NOT_FOUND))
+      g_error_matches (error, DM_DOMAIN_ERROR, DM_DOMAIN_ERROR_PATH_NOT_FOUND))
     {
       return g_error_new (EKS_ERROR,
                           EKS_ERROR_APP_NOT_FOUND,
                           error->message);
     }
-  else if (g_error_matches (error,
-                            EKNC_DOMAIN_ERROR,
-                            EKNC_DOMAIN_ERROR_UNSUPPORTED_VERSION))
+  else if (g_error_matches (error, DM_DOMAIN_ERROR,
+                            DM_DOMAIN_ERROR_UNSUPPORTED_VERSION))
     {
       return g_error_new (EKS_ERROR,
                           EKS_ERROR_UNSUPPORTED_VERSION,
                           error->message);
     }
-  else if (g_error_matches (error,
-                            EKNC_DOMAIN_ERROR,
-                            EKNC_DOMAIN_ERROR_ID_NOT_FOUND))
+  else if (g_error_matches (error, DM_DOMAIN_ERROR,
+                            DM_DOMAIN_ERROR_ID_NOT_FOUND))
     {
       return g_error_new (EKS_ERROR,
                           EKS_ERROR_ID_NOT_FOUND,
                           error->message);
     }
-  else if (g_error_matches (error,
-                            EKNC_DOMAIN_ERROR,
-                            EKNC_DOMAIN_ERROR_ID_NOT_VALID))
+  else if (g_error_matches (error, DM_DOMAIN_ERROR,
+                            DM_DOMAIN_ERROR_ID_NOT_VALID))
     {
       return g_error_new (EKS_ERROR,
                           EKS_ERROR_INVALID_REQUEST,
                           error->message);
     }
-  else if (g_error_matches (error,
-                            EKNC_DOMAIN_ERROR,
-                            EKNC_DOMAIN_ERROR_BAD_MANIFEST) ||
-           g_error_matches (error,
-                            EKNC_DOMAIN_ERROR,
-                            EKNC_DOMAIN_ERROR_BAD_RESULTS) ||
-           g_error_matches (error,
-                            EKNC_DOMAIN_ERROR,
-                            EKNC_DOMAIN_ERROR_EMPTY))
+  else if (g_error_matches (error, DM_DOMAIN_ERROR,
+                            DM_DOMAIN_ERROR_BAD_MANIFEST) ||
+           g_error_matches (error, DM_DOMAIN_ERROR,
+                            DM_DOMAIN_ERROR_BAD_RESULTS) ||
+           g_error_matches (error, DM_DOMAIN_ERROR,
+                            DM_DOMAIN_ERROR_EMPTY))
     {
       return g_error_new (EKS_ERROR,
                           EKS_ERROR_MALFORMED_APP,

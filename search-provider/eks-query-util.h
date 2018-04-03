@@ -2,18 +2,18 @@
 
 #pragma once
 
-#include <eos-knowledge-content.h>
+#include <dmodel.h>
 #include <eos-shard/eos-shard-shard-file.h>
 
 #include <gio/gio.h>
 
-gboolean models_for_result (EkncEngine    *engine,
+gboolean models_for_result (DmEngine      *engine,
                             const gchar   *application_id,
                             GAsyncResult  *result,
                             GSList       **models,
                             GError       **error);
 
-gboolean models_and_shards_for_result (EkncEngine    *engine,
+gboolean models_and_shards_for_result (DmEngine      *engine,
                                        const gchar   *application_id,
                                        GAsyncResult  *result,
                                        GSList       **models,
