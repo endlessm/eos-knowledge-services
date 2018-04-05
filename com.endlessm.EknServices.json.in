@@ -1,5 +1,6 @@
 {
     "app-id": "com.endlessm.EknServices",
+    "branch": "@BRANCH@",
     "runtime": "com.endlessm.apps.Platform",
     "runtime-version": "1",
     "sdk": "com.endlessm.apps.Sdk",
@@ -12,15 +13,33 @@
         "--share=network",
         "--socket=session-bus"
     ],
+    "add-extensions": {
+        "com.endlessm.EknServices.Extension": {
+            "directory": "build/eos-knowledge-services/1",
+            "bundle": true,
+            "autodelete": true,
+            "no-autodownload": true
+        }
+    },
     "modules": [
         {
             "name": "eos-knowledge-services",
             "sources": [
                 {
                     "type": "git",
-                    "url": "https://c5a7fd3e12c1d7b20bbff48a541d36f92d1e5a2d@github.com/endlessm/eos-knowledge-services.git",
-                    "branch": "@BRANCH@"
+                    "url": ".",
+                    "branch": "@GIT_CLONE_BRANCH@"
                 }
+            ]
+        },
+        {
+            "name": "eos-knowledge-services-extension",
+            "buildsystem": "simple",
+            "build-commands": [
+                "mkdir -p /app/build/eos-knowledge-services/1",
+                "cp -r /app/bin /app/build/eos-knowledge-services/1",
+                "cp -r /app/lib /app/build/eos-knowledge-services/1",
+                "cp -r /app/share /app/build/eos-knowledge-services/1"
             ]
         }
     ]
