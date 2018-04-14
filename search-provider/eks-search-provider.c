@@ -31,7 +31,7 @@ struct _EksSearchProvider
   EksSearchProvider2 *skeleton;
   EksKnowledgeSearch *app_proxy;
   GCancellable *cancellable;
-  // Hash table with ekn id string keys, DmContent values
+  // Hash table with ID string keys, DmContent values
   GHashTable *object_cache;
 };
 
@@ -193,10 +193,11 @@ search_finished (GObject *source,
   for (GSList *l = models; l; l = l->next)
     {
       DmContent *model = l->data;
-      g_autofree gchar *ekn_id = NULL;
-      g_object_get (model, "ekn-id", &ekn_id, NULL);
-      g_hash_table_insert (state->self->object_cache, g_strdup (ekn_id), g_object_ref (model));
-      g_variant_builder_add (&builder, "s", ekn_id);
+      g_autofree char *id = NULL;
+      g_object_get (model, "id", &id, NULL);
+      g_hash_table_insert (state->self->object_cache, g_strdup (id),
+                           g_object_ref (model));
+      g_variant_builder_add (&builder, "s", id);
     }
   g_dbus_method_invocation_return_value (state->invocation, g_variant_new ("(as)", &builder));
   search_state_free (state);

@@ -10,9 +10,9 @@ G_BEGIN_DECLS
  * EksError:
  * @EKS_ERROR_APP_NOT_FOUND: App or app file was not found
  * @EKS_ERROR_UNSUPPORTED_VERSION: Unsupported version of content found
- * @EKS_ERROR_ID_NOT_FOUND: Requested ekn id object not found
+ * @EKS_ERROR_ID_NOT_FOUND: Requested ID not found
  * @EKS_ERROR_MALFORMED_APP: App was not well-formed
- * @EKS_ERROR_INVALID_REQUEST: Caller made an malformed request
+ * @EKS_ERROR_INVALID_REQUEST: Caller made a malformed request
  *
  * Error enumeration for domain related errors.
  */
