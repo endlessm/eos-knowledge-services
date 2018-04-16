@@ -13,7 +13,7 @@
 # --------------
 # Initialize Autoconf: package name, version, bug report address, tarball name,
 # website
-AC_INIT([Endless OS Knowledge Services], [2],
+AC_INIT([Endless OS Knowledge Services], [3],
     [], [eos-knowledge-services], [http://endlessm.com])
 # Initialize Automake: enable all warnings and do not insist on GNU standards
 # no-portability suppresses warnings about syntax specific to GNU make

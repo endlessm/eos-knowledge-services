@@ -1,5 +1,5 @@
 {
-    "app-id": "com.endlessm.EknServices2",
+    "app-id": "com.endlessm.EknServices3",
     "branch": "master",
     "runtime": "com.endlessm.apps.Platform",
     "runtime-version": "master",
@@ -12,8 +12,8 @@
         "--socket=session-bus"
     ],
     "add-extensions": {
-        "com.endlessm.EknServices2.Extension": {
-            "directory": "build/eos-knowledge-services/2",
+        "com.endlessm.EknServices3.Extension": {
+            "directory": "build/eos-knowledge-services/3",
             "bundle": true,
             "autodelete": true,
             "no-autodownload": true
@@ -34,10 +34,10 @@
             "name": "eos-knowledge-services-extension",
             "buildsystem": "simple",
             "build-commands": [
-                "mkdir -p /app/build/eos-knowledge-services/2",
-                "cp -r /app/bin /app/build/eos-knowledge-services/2",
-                "cp -r /app/lib /app/build/eos-knowledge-services/2",
-                "cp -r /app/share /app/build/eos-knowledge-services/2"
+                "mkdir -p /app/build/eos-knowledge-services/3",
+                "cp -r /app/bin /app/build/eos-knowledge-services/3",
+                "cp -r /app/lib /app/build/eos-knowledge-services/3",
+                "cp -r /app/share /app/build/eos-knowledge-services/3"
             ]
         }
     ]
