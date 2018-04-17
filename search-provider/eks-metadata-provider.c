@@ -185,7 +185,8 @@ gvalue_to_variant_internal (GValue              *value,
 static gboolean
 maybe_add_key_value_pair_from_model_to_variant (EkncContentObjectModel  *model,
                                                 GVariantBuilder         *builder,
-                                                const char              *key,
+                                                const char              *property_name,
+                                                const char              *model_key,
                                                 const GVariantType      *expected_type,
                                                 GError                 **error)
 {
@@ -198,7 +199,7 @@ maybe_add_key_value_pair_from_model_to_variant (EkncContentObjectModel  *model,
     return TRUE;
 
   g_value_init (&value, pspec->value_type);
-  g_object_get_property (G_OBJECT (model), key, &value);
+  g_object_get_property (G_OBJECT (model), property_name, &value);
 
   if (!gvalue_to_variant_internal (&value, expected_type, &converted, error))
     return FALSE;
@@ -208,29 +209,32 @@ maybe_add_key_value_pair_from_model_to_variant (EkncContentObjectModel  *model,
   if (converted == NULL)
     return TRUE;
 
-  add_key_value_pair_to_variant (builder, key, g_steal_pointer (&converted));
+  /* Need to use a different name here as the name between the interface
+   * and the internal model key can vary */
+  add_key_value_pair_to_variant (builder, model_key, g_steal_pointer (&converted));
   return TRUE;
 }
 
 typedef struct _ModelVariantTypes {
   const gchar        *prop_name;
+  const gchar        *model_prop_name;
   const GVariantType *variant_type;
 } ModelVariantTypes;
 
 static const ModelVariantTypes model_variant_types[] = {
-  { "child_tags", G_VARIANT_TYPE_STRING_ARRAY },
-  { "content_type", G_VARIANT_TYPE_STRING },
-  { "copyright_holder", G_VARIANT_TYPE_STRING },
-  { "discovery_feed_content", G_VARIANT_TYPE_VARDICT },
-  { "ekn_id", G_VARIANT_TYPE_STRING },
-  { "language", G_VARIANT_TYPE_STRING },
-  { "last_modified_date", G_VARIANT_TYPE_STRING },
-  { "license", G_VARIANT_TYPE_STRING },
-  { "original_title", G_VARIANT_TYPE_STRING },
-  { "original_uri", G_VARIANT_TYPE_STRING },
-  { "tags", G_VARIANT_TYPE_STRING_ARRAY },
-  { "title", G_VARIANT_TYPE_STRING },
-  { "thumbnail_uri", G_VARIANT_TYPE_STRING }
+  { "child_tags", "child_tags", G_VARIANT_TYPE_STRING_ARRAY },
+  { "content_type", "content_type", G_VARIANT_TYPE_STRING },
+  { "copyright_holder", "copyright_holder", G_VARIANT_TYPE_STRING },
+  { "discovery_feed_content", "discovery_feed_content", G_VARIANT_TYPE_VARDICT },
+  { "ekn_id", "id", G_VARIANT_TYPE_STRING },
+  { "language", "language", G_VARIANT_TYPE_STRING },
+  { "last_modified_date", "last_modified_date", G_VARIANT_TYPE_STRING },
+  { "license", "license", G_VARIANT_TYPE_STRING },
+  { "original_title", "original_title", G_VARIANT_TYPE_STRING },
+  { "original_uri", "original_uri", G_VARIANT_TYPE_STRING },
+  { "tags", "tags", G_VARIANT_TYPE_STRING_ARRAY },
+  { "title", "title", G_VARIANT_TYPE_STRING },
+  { "thumbnail_uri", "thumbnail_uri", G_VARIANT_TYPE_STRING }
 };
 static const gsize model_variant_types_n = G_N_ELEMENTS (model_variant_types);
 
@@ -255,6 +259,7 @@ build_models_variants (GSList  *models,
           if (!maybe_add_key_value_pair_from_model_to_variant (model,
                                                                &builder,
                                                                model_prop->prop_name,
+                                                               model_prop->model_prop_name,
                                                                model_prop->variant_type,
                                                                error))
             return NULL;

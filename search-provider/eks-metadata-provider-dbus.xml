@@ -102,12 +102,12 @@
                  "original_uri": The URI that this content was sourced from.
                  "license": License for this content.
                  "copyright_holder": Who holds the copyright for this content.
-                 "thumbnail_uri": An EKN ID specifying the location in one
+                 "thumbnail_uri": An ID specifying the location in one
                                   of the returned shards where data for
                                   the thumbnail for this content is stored.
-                 "ekn_id": An EKN ID specifying the location in one of the
-                           returned shards where data for this content is
-                           stored.
+                 "id": An ID specifying the location in one of the
+                       returned shards where data for this content is
+                       stored.
                  "child_tags": If this content object model represents a
                                set, the tags which should be queried as part
                                of "tags-match-any" in Query above to find
@@ -128,7 +128,7 @@
         Shards:
         Just return the location for the shards for this app without running
         a query against its database. This is useful if the caller already
-        knows an EKN ID that they need to look up for an app and just needs
+        knows an ID that they need to look up for an app and just needs
         to know where its shard file is.
 
         Returns @Shards: an array of strings with file paths for where the shard
