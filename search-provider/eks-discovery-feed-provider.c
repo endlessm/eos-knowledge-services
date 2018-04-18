@@ -176,10 +176,24 @@ add_key_value_pair_from_model_to_variant (DmContent       *model,
                                           GVariantBuilder *builder,
                                           const char      *key)
 {
+  /* Warn if code should use add_id_from_model_to_variant() instead */
+  g_return_if_fail (strcmp (key, "id") != 0);
+
   g_autofree gchar *value = NULL;
   g_autofree gchar *underscore_key = underscorify (key);
   g_object_get (model, key, &value, NULL);
   add_key_value_pair_to_variant (builder, underscore_key, value);
+}
+
+/* For API compatibility, bridge mismatch between ekn_id and #DmContent:id.
+ * Remove this when bumping the API version and just use "id". */
+static void
+add_id_from_model_to_variant (DmContent       *model,
+                              GVariantBuilder *builder)
+{
+  g_autofree char *value = NULL;
+  g_object_get (model, "id", &value, NULL);
+  add_key_value_pair_to_variant (builder, "ekn_id", value);
 }
 
 static void
@@ -422,11 +436,11 @@ artwork_card_descriptions_cb (GObject *source,
       DmContent *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
 
+      add_id_from_model_to_variant (model, &builder);
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
       add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
-      add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
       add_first_string_value_from_model_to_variant (model, &builder, "authors", "author");
       add_first_string_value_from_model_to_variant (model, &builder, "temporal-coverage", "first-date");
 
@@ -548,9 +562,9 @@ content_article_card_descriptions_cb (GObject *source,
           add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
         }
 
+      add_id_from_model_to_variant (model, &builder);
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
-      add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
@@ -629,10 +643,10 @@ get_word_of_the_day_content_cb (GObject *source,
 
   DmContent *model = g_slist_nth (models, 0)->data;
 
+  add_id_from_model_to_variant (model, &builder);
   add_key_value_pair_from_model_to_variant (model, &builder, "word");
   add_key_value_pair_from_model_to_variant (model, &builder, "definition");
   add_key_value_pair_from_model_to_variant (model, &builder, "part-of-speech");
-  add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   eks_discovery_feed_word_complete_get_word_of_the_day (state->provider->word_skeleton,
                                                         state->invocation,
@@ -702,9 +716,9 @@ get_quote_of_the_day_content_cb (GObject *source,
 
   DmContent *model = g_slist_nth (models, 0)->data;
 
+  add_id_from_model_to_variant (model, &builder);
   add_key_value_pair_from_model_to_variant (model, &builder, "title");
   add_first_string_value_from_model_to_variant (model, &builder, "authors", "author");
-  add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
   eks_discovery_feed_quote_complete_get_quote_of_the_day (state->provider->quote_skeleton,
                                                           state->invocation,
@@ -785,11 +799,11 @@ recent_news_articles_cb (GObject *source,
 
       DmContent *model = l->data;
 
+      add_id_from_model_to_variant (model, &builder);
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
       add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
-      add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
@@ -876,10 +890,10 @@ relevant_video_cb (GObject *source,
 
       DmContent *model = l->data;
 
+      add_id_from_model_to_variant (model, &builder);
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
       add_key_value_int_to_str_pair_from_model_to_variant (model, &builder, "duration");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
-      add_key_value_pair_from_model_to_variant (model, &builder, "ekn-id");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
