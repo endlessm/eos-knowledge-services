@@ -192,7 +192,7 @@ maybe_add_key_value_pair_from_model_to_variant (EkncContentObjectModel  *model,
 {
   g_auto(GValue) value = G_VALUE_INIT;
   GParamSpec *pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (model),
-                                                    key);
+                                                    property_name);
   g_autoptr(GVariant) converted = NULL;
 
   if (pspec == NULL)
