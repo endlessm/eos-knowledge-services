@@ -8,6 +8,7 @@
         "--filesystem=/var/lib/flatpak:ro",
         "--filesystem=/var/endless-extra/flatpak:ro",
         "--filesystem=~/.local/share/flatpak:ro",
+        "--own-name=com.endlessm.EknServices3.SearchProviderV3",
         "--share=network",
         "--socket=session-bus"
     ],
