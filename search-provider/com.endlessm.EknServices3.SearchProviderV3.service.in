@@ -1,3 +1,4 @@
 [D-BUS Service]
 Name=com.endlessm.EknServices3.SearchProviderV3
 Exec=%bindir%/eks-search-provider-v3
+X-Flatpak-RunOptions=no-a11y-bus;no-documents-portal
