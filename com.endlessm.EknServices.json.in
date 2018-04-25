@@ -10,6 +10,7 @@
         "--filesystem=~/.local/share/flatpak:ro",
         "--filesystem=~/.local/share",
         "--env=EKN_SUBSCRIPTIONS_DIR=.local/share/com.endlessm.subscriptions",
+        "--own-name=com.endlessm.EknServices.SearchProviderV1",
         "--share=network",
         "--socket=session-bus"
     ],
