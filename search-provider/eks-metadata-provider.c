@@ -346,18 +346,23 @@ on_received_query_results (GObject      *source,
 static void
 append_construction_prop_from_string (const char *key,
                                       const char *str,
-                                      GArray     *values_array,
-                                      GPtrArray  *props_array)
+                                      GArray     *parameters_array)
 {
-  guint index = values_array->len;
+  guint index = parameters_array->len;
+  GParameter *parameter = NULL;
   GValue *value = NULL;
 
-  /* Need to be careful to set value *after* the array has been resized */
-  g_array_set_size (values_array, values_array->len + 1);
-  value = &(g_array_index (values_array, GValue, index));
+  /* Need to be careful to set parameter and value *after*
+   * the array has been resized */
+  g_array_set_size (parameters_array, parameters_array->len + 1);
+  parameter = &(g_array_index (parameters_array, GParameter, index));
+  value = &parameter->value;
+
   g_value_init (value, G_TYPE_STRING);
   g_value_set_string (value, str);
-  g_ptr_array_add (props_array, g_strdup (key));
+
+  /* Copying even though the member is const */
+  parameter->name = g_strdup (key);
 }
 
 typedef gboolean (*VariantToValueTransformFunc) (GVariant  *variant,
@@ -406,25 +411,27 @@ translate_gvariant_to_gvalue_parse_enum (GVariant  *variant,
 static gboolean
 append_construction_prop_from_variant (const char                   *key,
                                        GVariant                     *variant,
-                                       GArray                       *values_array,
-                                       GPtrArray                    *props_array,
+                                       GArray                       *parameters_array,
                                        VariantToValueTransformFunc   transform,
                                        gpointer                      user_data,
                                        GError                      **error)
 {
-  guint index = values_array->len;
+  guint index = parameters_array->len;
+  GParameter *parameter = NULL;
   GValue *value = NULL;
 
-  /* Need to be careful to set value *after* the array has been resized */
-  g_array_set_size (values_array, values_array->len + 1);
-  value = &(g_array_index (values_array, GValue, index));
+  /* Need to be careful to set parameter *after* the array has been resized */
+  g_array_set_size (parameters_array, parameters_array->len + 1);
+  parameter = &g_array_index (parameters_array, GParameter, index);
+  value = &parameter->value;
 
   /* If we return false from here, this should be treated as an
    * unrecoverable error for the call */
   if (!transform (variant, value, user_data, error))
     return FALSE;
 
-  g_ptr_array_add (props_array, g_strdup (key));
+  /* Copying into name here even though the name is const */
+  parameter->name = g_strdup (key);
 
   return TRUE;
 }
@@ -432,15 +439,13 @@ append_construction_prop_from_variant (const char                   *key,
 static gboolean
 append_construction_prop_from_variant_dbus_transform (const char  *key,
                                                       GVariant    *variant,
-                                                      GArray      *values_array,
-                                                      GPtrArray   *props_array,
+                                                      GArray      *parameters_array,
                                                       gpointer     extra_data,
                                                       GError     **error)
 {
   return append_construction_prop_from_variant (key,
                                                 variant,
-                                                values_array,
-                                                props_array,
+                                                parameters_array,
                                                 translate_gvariant_to_gvalue,
                                                 extra_data,
                                                 error);
@@ -449,15 +454,13 @@ append_construction_prop_from_variant_dbus_transform (const char  *key,
 static gboolean
 append_construction_prop_from_variant_enum_transform (const char  *key,
                                                       GVariant    *variant,
-                                                      GArray      *values_array,
-                                                      GPtrArray   *props_array,
+                                                      GArray      *parameters_array,
                                                       gpointer     extra_data,
                                                       GError     **error)
 {
   return append_construction_prop_from_variant (key,
                                                 variant,
-                                                values_array,
-                                                props_array,
+                                                parameters_array,
                                                 translate_gvariant_to_gvalue_parse_enum,
                                                 extra_data,
                                                 error);
@@ -465,8 +468,7 @@ append_construction_prop_from_variant_enum_transform (const char  *key,
 
 typedef gboolean (*AppendConstructionPropFromVariantWithTransformFunc) (const char  *key,
                                                                         GVariant    *variant,
-                                                                        GArray      *values_array,
-                                                                        GPtrArray   *props_array,
+                                                                        GArray      *parameters_array,
                                                                         gpointer     extra_data,
                                                                         GError     **error);
 
@@ -560,6 +562,13 @@ article_metadata_query_construction_props_translation_table (void)
   return g_steal_pointer (&table);
 }
 
+static void
+clear_gparameter_with_allocated_name (GParameter *parameter)
+{
+  g_clear_pointer (&parameter->name, g_free);
+  g_value_unset (&parameter->value);
+}
+
 static EkncQueryObject *
 create_query_from_dbus_query_parameters (GVariant     *query_parameters,
                                          const char   *application_id,
@@ -570,14 +579,13 @@ create_query_from_dbus_query_parameters (GVariant     *query_parameters,
   char *iter_key;
   GVariant *iter_value;
 
-  g_autoptr(GArray) values_array = g_array_new (FALSE, TRUE, sizeof (GValue));
-  g_autoptr(GPtrArray) props_array = g_ptr_array_new_with_free_func (g_free);
+  g_autoptr(GArray) parameters_array = g_array_new (FALSE, TRUE, sizeof (GParameter));
+  g_array_set_clear_func (parameters_array, (GDestroyNotify) clear_gparameter_with_allocated_name);
 
   /* Always add the app-id to the query */
   append_construction_prop_from_string ("app-id",
                                         application_id,
-                                        values_array,
-                                        props_array);
+                                        parameters_array);
 
   g_variant_iter_init (&iter, query_parameters);
   while (g_variant_iter_next (&iter, "{sv}", &iter_key, &iter_value))
@@ -599,17 +607,15 @@ create_query_from_dbus_query_parameters (GVariant     *query_parameters,
 
       if (!translation_info->append_func (key,
                                           variant,
-                                          values_array,
-                                          props_array,
+                                          parameters_array,
                                           translation_info->user_data,
                                           error))
         return NULL;
     }
 
-  return EKNC_QUERY_OBJECT (g_object_new_with_properties (EKNC_TYPE_QUERY_OBJECT,
-                                                          props_array->len,
-                                                          (const char **) props_array->pdata,
-                                                          (const GValue *) values_array->data));
+  return EKNC_QUERY_OBJECT (g_object_newv (EKNC_TYPE_QUERY_OBJECT,
+                                           parameters_array->len,
+                                           (GParameter *) parameters_array->data));
 }
 
 static gboolean
