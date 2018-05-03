@@ -161,21 +161,11 @@ gvalue_to_variant_internal (GValue              *value,
   g_return_val_if_fail (out_variant != NULL, FALSE);
 
   /* Special case: if expected_type is G_VARIANT_TYPE_VARDICT then we need
-   * to deserialize from JsonObject. */
+   * to dup the variant directly. */
   if (expected_type == G_VARIANT_TYPE_VARDICT)
     {
-      JsonObject *object = g_value_get_boxed (value);
-
-      if (object == NULL)
-        return TRUE;
-
-      g_autoptr(JsonNode) node = json_node_new (JSON_NODE_OBJECT);
-
-      json_node_init_object (node, object);
-      *out_variant = json_gvariant_deserialize (node,
-                                                NULL,
-                                                error);
-      return *out_variant != NULL;
+      *out_variant = g_value_dup_variant (value);
+      return TRUE;
     }
 
   *out_variant = g_dbus_gvalue_to_gvariant (value, expected_type);
@@ -201,8 +191,16 @@ maybe_add_key_value_pair_from_model_to_variant (EkncContentObjectModel  *model,
   g_value_init (&value, pspec->value_type);
   g_object_get_property (G_OBJECT (model), property_name, &value);
 
-  if (!gvalue_to_variant_internal (&value, expected_type, &converted, error))
-    return FALSE;
+  /* Special case for SDK1: If the expected type is G_VARIANT_TYPE_STRING_ARRAY
+   * we need to read for a G_VALUE_TYPE_VARIANT and then deserialize as opposed
+   * to trying to read from a GStrv */
+  if (g_variant_type_equal (expected_type, G_VARIANT_TYPE_STRING_ARRAY))
+    converted = g_value_dup_variant (&value);
+  else
+    {
+      if (!gvalue_to_variant_internal (&value, expected_type, &converted, error))
+        return FALSE;
+    }
 
   /* If we got NULL here it just means that the source property was NULL,
    * so don't add it. */
@@ -380,6 +378,17 @@ translate_gvariant_to_gvalue (GVariant  *variant,
   return TRUE;
 }
 
+static gboolean
+translate_gvariant_to_gvalue_passthrough (GVariant  *variant,
+                                          GValue    *value,
+                                          gpointer   user_data,
+                                          GError   **error)
+{
+  g_value_init (value, G_TYPE_VARIANT);
+  g_value_set_variant (value, variant);
+  return TRUE;
+}
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (GEnumClass, g_type_class_unref)
 
 static gboolean
@@ -466,6 +475,21 @@ append_construction_prop_from_variant_enum_transform (const char  *key,
                                                 error);
 }
 
+static gboolean
+append_construction_prop_from_variant_passthrough_transform (const char  *key,
+                                                             GVariant    *variant,
+                                                             GArray      *parameters_array,
+                                                             gpointer     extra_data,
+                                                             GError     **error)
+{
+  return append_construction_prop_from_variant (key,
+                                                variant,
+                                                parameters_array,
+                                                translate_gvariant_to_gvalue_passthrough,
+                                                extra_data,
+                                                error);
+}
+
 typedef gboolean (*AppendConstructionPropFromVariantWithTransformFunc) (const char  *key,
                                                                         GVariant    *variant,
                                                                         GArray      *parameters_array,
@@ -530,12 +554,12 @@ article_metadata_query_construction_props_translation_table (void)
                                                    NULL));
   g_hash_table_insert (table,
                        g_strdup ("tags-match-any"),
-                       value_translation_info_new (append_construction_prop_from_variant_dbus_transform,
+                       value_translation_info_new (append_construction_prop_from_variant_passthrough_transform,
                                                    NULL,
                                                    NULL));
   g_hash_table_insert (table,
                        g_strdup ("tags-match-all"),
-                       value_translation_info_new (append_construction_prop_from_variant_dbus_transform,
+                       value_translation_info_new (append_construction_prop_from_variant_passthrough_transform,
                                                    NULL,
                                                    NULL));
   g_hash_table_insert (table,
