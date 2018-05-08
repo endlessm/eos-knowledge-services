@@ -5,6 +5,7 @@
 #include "eks-errors.h"
 #include "eks-provider-iface.h"
 #include "eks-query-util.h"
+#include "eks-shards-util.h"
 
 #include "eks-knowledge-app-dbus.h"
 #include "eks-metadata-provider.h"
@@ -665,6 +666,15 @@ handle_query (EksContentMetadata    *skeleton,
                                                         "This version of eks-search-provider "
                                                         "can only perform one query, not %u",
                                                         n_children));
+      return TRUE;
+    }
+
+  if (!eks_ensure_app_shards_are_symlinked_to_home_directory (engine,
+                                                              self->application_id,
+                                                              &local_error))
+    {
+      g_dbus_method_invocation_take_error (invocation,
+                                           g_steal_pointer (&local_error));
       return TRUE;
     }
 
