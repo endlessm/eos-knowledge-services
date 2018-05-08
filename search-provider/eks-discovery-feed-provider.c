@@ -5,6 +5,7 @@
 
 #include "eks-knowledge-app-dbus.h"
 #include "eks-discovery-feed-provider-dbus.h"
+#include "eks-shards-util.h"
 #include "eks-query-util.h"
 
 #include <eos-knowledge-content.h>
@@ -643,6 +644,16 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
+    g_autoptr(GError) local_error = NULL;
+
+    if (!eks_ensure_app_shards_are_symlinked_to_home_directory (engine,
+                                                                self->application_id,
+                                                                &local_error))
+      {
+        g_dbus_method_invocation_take_error (invocation,
+                                             g_steal_pointer (&local_error));
+        return TRUE;
+      }
 
     /* Build up tags_match_any */
     GVariantBuilder tags_match_any_builder;
@@ -783,6 +794,16 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
+    g_autoptr(GError) local_error = NULL;
+
+    if (!eks_ensure_app_shards_are_symlinked_to_home_directory (engine,
+                                                                self->application_id,
+                                                                &local_error))
+      {
+        g_dbus_method_invocation_take_error (invocation,
+                                             g_steal_pointer (&local_error));
+        return TRUE;
+      }
 
     /* Build up tags_match_any */
     GVariantBuilder tags_match_any_builder;
@@ -870,6 +891,16 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
+    g_autoptr(GError) local_error = NULL;
+
+    if (!eks_ensure_app_shards_are_symlinked_to_home_directory (engine,
+                                                                self->application_id,
+                                                                &local_error))
+      {
+        g_dbus_method_invocation_take_error (invocation,
+                                             g_steal_pointer (&local_error));
+        return TRUE;
+      }
 
     /* Build up tags_match_any */
     GVariantBuilder tags_match_any_builder;
@@ -949,6 +980,16 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
+    g_autoptr(GError) local_error = NULL;
+
+    if (!eks_ensure_app_shards_are_symlinked_to_home_directory (engine,
+                                                                self->application_id,
+                                                                &local_error))
+      {
+        g_dbus_method_invocation_take_error (invocation,
+                                             g_steal_pointer (&local_error));
+        return TRUE;
+      }
 
     /* Build up tags_match_any */
     GVariantBuilder tags_match_any_builder;
@@ -1046,6 +1087,16 @@ handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
+    g_autoptr(GError) local_error = NULL;
+
+    if (!eks_ensure_app_shards_are_symlinked_to_home_directory (engine,
+                                                                self->application_id,
+                                                                &local_error))
+      {
+        g_dbus_method_invocation_take_error (invocation,
+                                             g_steal_pointer (&local_error));
+        return TRUE;
+      }
 
     /* Build up tags_match_any */
     GVariantBuilder tags_match_any_builder;
@@ -1147,6 +1198,16 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
       return TRUE;
 
     EkncEngine *engine = eknc_engine_get_default ();
+    g_autoptr(GError) local_error = NULL;
+
+    if (!eks_ensure_app_shards_are_symlinked_to_home_directory (engine,
+                                                                self->application_id,
+                                                                &local_error))
+      {
+        g_dbus_method_invocation_take_error (invocation,
+                                             g_steal_pointer (&local_error));
+        return TRUE;
+      }
 
     /* Build up tags_match_any */
     GVariantBuilder tags_match_any_builder;
