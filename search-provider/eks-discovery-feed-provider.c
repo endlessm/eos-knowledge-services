@@ -375,6 +375,15 @@ query_with_wraparound_offset (EkncEngine            *engine,
                                                     main_query_ready_destroy));
 }
 
+static gboolean
+model_has_thumbnail_uri (EkncContentObjectModel *model)
+{
+  g_autofree char *thumbnail_uri = NULL;
+  g_object_get (model, "thumbnail-uri", &thumbnail_uri);
+
+  return thumbnail_uri != NULL;
+}
+
 static void
 artwork_card_descriptions_cb (GObject *source,
                               GAsyncResult *result,
@@ -412,11 +421,14 @@ artwork_card_descriptions_cb (GObject *source,
 
   for (GSList *l = models; l; l = l->next)
     {
-      /* Start building up object */
-      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
       EkncContentObjectModel *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
+
+      if (!model_has_thumbnail_uri (model))
+        continue;
+
+      /* Start building up object */
+      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
       add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
@@ -509,11 +521,14 @@ content_article_card_descriptions_cb (GObject *source,
 
   for (GSList *l = models; l; l = l->next)
     {
-      /* Start building up object */
-      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
       EkncContentObjectModel *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
+
+      if (!model_has_thumbnail_uri (model))
+        continue;
+
+      /* Start building up object */
+      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
       /* Examine the discovery-feed-content string first and set flags
        * for things that we've overridden */
@@ -777,10 +792,13 @@ recent_news_articles_cb (GObject *source,
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
   for (GSList *l = models; l; l = l->next)
     {
+      EkncContentObjectModel *model = l->data;
+
+      if (!model_has_thumbnail_uri (model))
+        continue;
+
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
-      EkncContentObjectModel *model = l->data;
 
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
       add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
@@ -868,13 +886,16 @@ relevant_video_cb (GObject *source,
   gint videos_found = 0;
   for (GSList *l = models; l; l = l->next)
     {
-      if (!EKNC_IS_VIDEO_OBJECT_MODEL (l->data))
+      EkncContentObjectModel *model = l->data;
+
+      if (!EKNC_IS_VIDEO_OBJECT_MODEL (model))
+        continue;
+
+      if (!model_has_thumbnail_uri (model))
         continue;
 
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
-      EkncContentObjectModel *model = l->data;
 
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
       add_key_value_int_to_str_pair_from_model_to_variant (model, &builder, "duration");
