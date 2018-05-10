@@ -393,6 +393,15 @@ query_with_wraparound_offset (DmEngine              *engine,
                                                   main_query_ready_destroy));
 }
 
+static gboolean
+model_has_thumbnail_uri (DmContent *model)
+{
+  g_autofree char *thumbnail_uri = NULL;
+  g_object_get (model, "thumbnail-uri", &thumbnail_uri);
+
+  return thumbnail_uri != NULL;
+}
+
 static void
 artwork_card_descriptions_cb (GObject *source,
                               GAsyncResult *result,
@@ -430,11 +439,14 @@ artwork_card_descriptions_cb (GObject *source,
 
   for (GSList *l = models; l; l = l->next)
     {
-      /* Start building up object */
-      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
       DmContent *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
+
+      if (!model_has_thumbnail_uri (model))
+        continue;
+
+      /* Start building up object */
+      g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
       add_id_from_model_to_variant (model, &builder);
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
@@ -527,10 +539,14 @@ content_article_card_descriptions_cb (GObject *source,
 
   for (GSList *l = models; l; l = l->next)
     {
+      DmContent *model = l->data;
+
+      if (!model_has_thumbnail_uri (model))
+        continue;
+
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
 
-      DmContent *model = l->data;
       DiscoveryFeedCustomProps flags = DISCOVERY_FEED_NO_CUSTOM_PROPS;
 
       /* Examine the discovery-feed-content string first and set flags
@@ -794,10 +810,13 @@ recent_news_articles_cb (GObject *source,
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
   for (GSList *l = models; l; l = l->next)
     {
+      DmContent *model = l->data;
+
+      if (!model_has_thumbnail_uri (model))
+        continue;
+
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
-      DmContent *model = l->data;
 
       add_id_from_model_to_variant (model, &builder);
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
@@ -882,13 +901,16 @@ relevant_video_cb (GObject *source,
   gint videos_found = 0;
   for (GSList *l = models; l; l = l->next)
     {
-      if (!DM_IS_VIDEO (l->data))
+      DmContent *model = l->data;
+
+      if (!DM_IS_VIDEO (model))
+        continue;
+
+      if (!model_has_thumbnail_uri (model))
         continue;
 
       /* Start building up object */
       g_variant_builder_open (&builder, G_VARIANT_TYPE ("a{ss}"));
-
-      DmContent *model = l->data;
 
       add_id_from_model_to_variant (model, &builder);
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
