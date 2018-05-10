@@ -4,6 +4,8 @@
 
 #include "eks-discovery-feed-provider-dbus.h"
 #include "eks-discovery-feed-provider.h"
+#include "eks-metadata-provider.h"
+#include "eks-metadata-provider-dbus.h"
 #include "eks-provider-iface.h"
 #include "eks-search-provider.h"
 #include "eks-search-provider-dbus.h"
@@ -30,6 +32,8 @@ struct _EksSearchApp
   GHashTable *app_search_providers;
   // Hash table with app id string keys, EksDiscoveryFeedContentProvider values
   GHashTable *discovery_feed_content_providers;
+  // Hash table with app id string keys, EksMetadataProvider values
+  GHashTable *metadata_providers;
 };
 
 G_DEFINE_TYPE (EksSearchApp,
@@ -44,6 +48,7 @@ eks_search_app_finalize (GObject *object)
   g_clear_object (&self->dispatcher);
   g_clear_pointer (&self->app_search_providers, g_hash_table_unref);
   g_clear_pointer (&self->discovery_feed_content_providers, g_hash_table_unref);
+  g_clear_pointer (&self->metadata_providers, g_hash_table_unref);
 
   G_OBJECT_CLASS (eks_search_app_parent_class)->finalize (object);
 }
@@ -169,6 +174,11 @@ subtree_object_info_for_interface (EksSearchApp      *self,
       info->create_type = EKS_TYPE_DISCOVERY_FEED_DATABASE_CONTENT_PROVIDER;
       info->cache = self->discovery_feed_content_providers;
     }
+  else if (g_strcmp0 (interface, "com.endlessm.ContentMetadata") == 0)
+    {
+      info->create_type = EKS_TYPE_METADATA_PROVIDER;
+      info->cache = self->metadata_providers;
+    }
   else
     g_assert_not_reached();
 }
@@ -206,6 +216,7 @@ eks_search_app_node_interface_infos ()
   g_ptr_array_add (ptr_array, eks_discovery_feed_news_interface_info ());
   g_ptr_array_add (ptr_array, eks_discovery_feed_video_interface_info ());
   g_ptr_array_add (ptr_array, eks_discovery_feed_artwork_interface_info ());
+  g_ptr_array_add (ptr_array, eks_content_metadata_interface_info ());
   return ptr_array;
 }
 
@@ -217,6 +228,7 @@ eks_search_app_init (EksSearchApp *self)
                                    NULL);
   self->app_search_providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
   self->discovery_feed_content_providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+  self->metadata_providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
   g_signal_connect (self->dispatcher, "dispatch-subtree",
                     G_CALLBACK (dispatch_subtree), self);
 }
