@@ -72,7 +72,7 @@ models_and_shards_for_result (DmEngine    *engine,
 GStrv
 strv_from_shard_list (GSList *string_list)
 {
-  GStrv strv = g_new0 (char *, g_slist_length (string_list));
+  GStrv strv = g_new0 (char *, g_slist_length (string_list) + 1);
   guint count = 0;
 
   for (GSList *l = string_list; l; l = l->next)
