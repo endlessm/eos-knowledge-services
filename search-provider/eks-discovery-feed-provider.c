@@ -443,6 +443,7 @@ artwork_card_descriptions_cb (GObject *source,
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
       add_first_string_value_from_model_to_variant (model, &builder, "authors", "author");
       add_first_string_value_from_model_to_variant (model, &builder, "temporal-coverage", "first-date");
+      add_key_value_pair_from_model_to_variant (model, &builder, "content-type");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
@@ -565,6 +566,7 @@ content_article_card_descriptions_cb (GObject *source,
       add_id_from_model_to_variant (model, &builder);
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
+      add_key_value_pair_from_model_to_variant (model, &builder, "content-type");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
@@ -804,6 +806,7 @@ recent_news_articles_cb (GObject *source,
       add_key_value_pair_from_model_to_variant (model, &builder, "synopsis");
       add_key_value_pair_from_model_to_variant (model, &builder, "last-modified-date");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
+      add_key_value_pair_from_model_to_variant (model, &builder, "content-type");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
@@ -894,6 +897,7 @@ relevant_video_cb (GObject *source,
       add_key_value_pair_from_model_to_variant (model, &builder, "title");
       add_key_value_int_to_str_pair_from_model_to_variant (model, &builder, "duration");
       add_key_value_pair_from_model_to_variant (model, &builder, "thumbnail-uri");
+      add_key_value_pair_from_model_to_variant (model, &builder, "content-type");
 
       /* Stop building object */
       g_variant_builder_close (&builder);
