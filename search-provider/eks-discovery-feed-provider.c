@@ -672,7 +672,7 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -826,7 +826,7 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     GVariantBuilder tags_match_all_builder;
     g_variant_builder_init (&tags_match_all_builder, G_VARIANT_TYPE ("as"));
@@ -923,7 +923,7 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -1012,7 +1012,7 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -1123,7 +1123,7 @@ handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
@@ -1239,7 +1239,7 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknMediaObject");
     
-    GVariant *tags_match_any = g_variant_builder_end (&tags_match_any_builder);
+    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
