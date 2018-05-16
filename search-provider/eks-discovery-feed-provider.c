@@ -379,7 +379,7 @@ static gboolean
 model_has_thumbnail_uri (EkncContentObjectModel *model)
 {
   g_autofree char *thumbnail_uri = NULL;
-  g_object_get (model, "thumbnail-uri", &thumbnail_uri);
+  g_object_get (model, "thumbnail-uri", &thumbnail_uri, NULL);
 
   return thumbnail_uri != NULL;
 }
