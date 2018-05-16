@@ -931,24 +931,24 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
     EkncEngine *engine = eknc_engine_get_default ();
     const char *tags_match_any[] = { "EknMediaObject", NULL };
 
-    /* Create query and run it */
-    g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
-                                                     "sort", EKNC_QUERY_OBJECT_SORT_DATE,
-                                                     "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
-                                                     "limit", SENSIBLE_QUERY_LIMIT,
-                                                     "app-id", self->application_id,
-                                                     NULL);
-
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
     g_application_hold (g_application_get_default ());
 
-    eknc_engine_query (engine,
-                       query,
-                       self->cancellable,
-                       relevant_video_cb,
-                       discovery_feed_query_state_new (invocation, self));
+    /* Create query and run it */
+    query_with_wraparound_offset (engine,
+                                  g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                "tags-match-any", tags_match_any,
+                                                "limit", 1,
+                                                "app-id", self->application_id,
+                                                NULL),
+                                  get_day_of_year (),
+                                  DAYS_IN_YEAR,
+                                  invocation,
+                                  self->cancellable,
+                                  relevant_video_cb,
+                                  discovery_feed_query_state_new (invocation, self),
+                                  (GDestroyNotify) discovery_feed_query_state_free);
 
     return TRUE;
 }
