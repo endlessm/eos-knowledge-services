@@ -3,6 +3,7 @@
 #include "eks-discovery-feed-provider.h"
 #include "eks-provider-iface.h"
 
+#include "eks-errors.h"
 #include "eks-knowledge-app-dbus.h"
 #include "eks-discovery-feed-provider-dbus.h"
 #include "eks-query-util.h"
@@ -637,6 +638,16 @@ get_word_of_the_day_content_cb (GObject *source,
       return;
     }
 
+  if (models == NULL)
+    {
+      g_dbus_method_invocation_return_error_literal (state->invocation,
+                                                     EKS_ERROR,
+                                                     EKS_ERROR_MALFORMED_APP,
+                                                     "No results for word of the day");
+      discovery_feed_query_state_free (state);
+      return;
+    }
+
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
 
@@ -706,6 +717,16 @@ get_quote_of_the_day_content_cb (GObject *source,
                           &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
+      discovery_feed_query_state_free (state);
+      return;
+    }
+
+  if (models == NULL)
+    {
+      g_dbus_method_invocation_return_error_literal (state->invocation,
+                                                     EKS_ERROR,
+                                                     EKS_ERROR_MALFORMED_APP,
+                                                     "No results for quote of the day");
       discovery_feed_query_state_free (state);
       return;
     }
