@@ -959,6 +959,7 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
     /* Create query and run it */
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
+                                                "content-type", "video",
                                                 "tags-match-any", tags_match_any,
                                                 "limit", 1,
                                                 "app-id", self->application_id,
