@@ -3,6 +3,7 @@
 #include "eks-discovery-feed-provider.h"
 #include "eks-provider-iface.h"
 
+#include "eks-errors.h"
 #include "eks-knowledge-app-dbus.h"
 #include "eks-discovery-feed-provider-dbus.h"
 #include "eks-query-util.h"
@@ -656,6 +657,16 @@ get_word_of_the_day_content_cb (GObject *source,
       return;
     }
 
+  if (models == NULL)
+    {
+      g_dbus_method_invocation_return_error_literal (state->invocation,
+                                                     EKS_ERROR,
+                                                     EKS_ERROR_MALFORMED_APP,
+                                                     "No results for word of the day");
+      discovery_feed_query_state_free (state);
+      return;
+    }
+
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
 
@@ -725,6 +736,16 @@ get_quote_of_the_day_content_cb (GObject *source,
                           &error))
     {
       g_dbus_method_invocation_take_error (state->invocation, error);
+      discovery_feed_query_state_free (state);
+      return;
+    }
+
+  if (models == NULL)
+    {
+      g_dbus_method_invocation_return_error_literal (state->invocation,
+                                                     EKS_ERROR,
+                                                     EKS_ERROR_MALFORMED_APP,
+                                                     "No results for quote of the day");
       discovery_feed_query_state_free (state);
       return;
     }
@@ -946,21 +967,25 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
     DmEngine *engine = dm_engine_get_default ();
     const char *tags_match_any[] = { "EknMediaObject", NULL };
 
-    /* Create query and run it */
-    g_autoptr(DmQuery) query = g_object_new (DM_TYPE_QUERY,
-                                             "tags-match-any", tags_match_any,
-                                             "sort", DM_QUERY_SORT_DATE,
-                                             "order", DM_QUERY_ORDER_DESCENDING,
-                                             "limit", SENSIBLE_QUERY_LIMIT,
-                                             "app-id", self->application_id,
-                                             NULL);
-
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
     g_application_hold (g_application_get_default ());
 
-    dm_engine_query (engine, query, self->cancellable, relevant_video_cb,
-                     discovery_feed_query_state_new (invocation, self));
+    /* Create query and run it */
+    query_with_wraparound_offset (engine,
+                                  g_object_new (DM_TYPE_QUERY,
+                                                "content-type", "video",
+                                                "tags-match-any", tags_match_any,
+                                                "limit", 1,
+                                                "app-id", self->application_id,
+                                                NULL),
+                                  get_day_of_year (),
+                                  DAYS_IN_YEAR,
+                                  invocation,
+                                  self->cancellable,
+                                  relevant_video_cb,
+                                  discovery_feed_query_state_new (invocation, self),
+                                  (GDestroyNotify) discovery_feed_query_state_free);
 
     return TRUE;
 }
