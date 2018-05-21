@@ -922,7 +922,7 @@ relevant_video_cb (GObject *source,
 
   GVariantBuilder builder;
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("aa{ss}"));
-  gint videos_found = 0;
+
   for (GSList *l = models; l; l = l->next)
     {
       DmContent *model = l->data;
@@ -944,10 +944,6 @@ relevant_video_cb (GObject *source,
 
       /* Stop building object */
       g_variant_builder_close (&builder);
-
-      videos_found += 1;
-      if (videos_found == NUMBER_OF_ARTICLES)
-        break;
     }
   eks_discovery_feed_video_complete_get_videos (state->provider->video_skeleton,
                                                 state->invocation,
