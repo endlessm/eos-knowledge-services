@@ -462,6 +462,26 @@ append_construction_prop_from_variant_dbus_transform (const char  *key,
 }
 
 static gboolean
+append_query_construction_prop_from_variant_dbus_transform (const char  *key,
+                                                            GVariant    *variant,
+                                                            GArray      *parameters_array,
+                                                            gpointer     extra_data,
+                                                            GError     **error)
+{
+  /* We need to use a custom transform here that hardcodes "query" as the
+   * key name that is going to be used to construct the GObject, even though
+   * the key we receive over DBus is called "search-terms".
+   * EkncQueryObject changed this API in later versions.
+   */
+  return append_construction_prop_from_variant ("query",
+                                                variant,
+                                                parameters_array,
+                                                translate_gvariant_to_gvalue,
+                                                extra_data,
+                                                error);
+}
+
+static gboolean
 append_construction_prop_from_variant_enum_transform (const char  *key,
                                                       GVariant    *variant,
                                                       GArray      *parameters_array,
@@ -550,7 +570,7 @@ article_metadata_query_construction_props_translation_table (void)
 
   g_hash_table_insert (table,
                        g_strdup ("search-terms"),
-                       value_translation_info_new (append_construction_prop_from_variant_dbus_transform,
+                       value_translation_info_new (append_query_construction_prop_from_variant_dbus_transform,
                                                    NULL,
                                                    NULL));
   g_hash_table_insert (table,
