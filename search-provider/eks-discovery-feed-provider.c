@@ -1203,9 +1203,6 @@ relevant_video_cb (GObject *source,
     {
       EkncContentObjectModel *model = l->data;
 
-      if (!EKNC_IS_VIDEO_OBJECT_MODEL (model))
-        continue;
-
       if (!model_has_thumbnail_uri (model))
         continue;
 
@@ -1259,7 +1256,9 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Build up tags_match_any */
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
-    g_variant_builder_add (&tags_match_any_builder, "s", "EknMediaObject");
+    g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
+    
+    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
