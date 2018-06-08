@@ -912,9 +912,6 @@ relevant_video_cb (GObject *source,
     {
       EkncContentObjectModel *model = l->data;
 
-      if (!EKNC_IS_VIDEO_OBJECT_MODEL (model))
-        continue;
-
       if (!model_has_thumbnail_uri (model))
         continue;
 
@@ -950,7 +947,7 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     EkncEngine *engine = eknc_engine_get_default ();
-    const char *tags_match_any[] = { "EknMediaObject", NULL };
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
