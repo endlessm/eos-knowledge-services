@@ -925,9 +925,6 @@ relevant_video_cb (GObject *source,
     {
       DmContent *model = l->data;
 
-      if (!DM_IS_VIDEO (model))
-        continue;
-
       if (!model_has_thumbnail_uri (model))
         continue;
 
@@ -959,7 +956,7 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
 {
     EksDiscoveryFeedProvider *self = user_data;
     DmEngine *engine = dm_engine_get_default ();
-    const char *tags_match_any[] = { "EknMediaObject", NULL };
+    const char *tags_match_any[] = { "EknArticleObject", NULL };
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -968,7 +965,6 @@ handle_get_videos (EksDiscoveryFeedProvider *skeleton,
     /* Create query and run it */
     query_with_wraparound_offset (engine,
                                   g_object_new (DM_TYPE_QUERY,
-                                                "content-type", "video",
                                                 "tags-match-any", tags_match_any,
                                                 "limit", 1,
                                                 "app-id", self->application_id,
