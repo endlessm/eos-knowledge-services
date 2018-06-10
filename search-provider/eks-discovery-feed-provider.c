@@ -18,7 +18,7 @@
 #define NUMBER_OF_ARTICLES 5
 #define DAYS_IN_YEAR 365
 // In SDK2, the default limit is 0 in SDK3, the default limit is all matches
-#define SENSIBLE_QUERY_LIMIT 500
+#define SENSIBLE_QUERY_LIMIT G_MAXUINT
 
 struct _EksDiscoveryFeedProvider
 {
