@@ -311,7 +311,7 @@ on_received_query_results (GObject      *source,
     }
 
   shards_strv = strv_from_shard_list (shards);
-  models_variant = build_models_variants (models, &error);
+  models_variant = g_variant_ref_sink (build_models_variants (models, &error));
 
   if (models_variant == NULL)
     {
