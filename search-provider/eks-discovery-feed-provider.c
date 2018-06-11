@@ -690,7 +690,6 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -699,7 +698,7 @@ handle_artwork_card_descriptions (EksDiscoveryFeedDatabaseContentProvider *skele
     /* Create query and run it */
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                "tags-match-any", tags_match_any,
+                                                "tags-match-any", g_variant_builder_end (&tags_match_any_builder),
                                                 "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                 "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                 "limit", NUMBER_OF_ARTICLES,
@@ -846,7 +845,6 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -855,7 +853,7 @@ handle_content_article_card_descriptions (EksDiscoveryFeedDatabaseContentProvide
     /* Create query and run it */
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                "tags-match-any", tags_match_any,
+                                                "tags-match-any", g_variant_builder_end (&tags_match_any_builder),
                                                 "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                 "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                 "limit", NUMBER_OF_ARTICLES,
@@ -941,7 +939,6 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -950,7 +947,7 @@ handle_get_word_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Create query and run it */
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                "tags-match-any", tags_match_any,
+                                                "tags-match-any", g_variant_builder_end (&tags_match_any_builder),
                                                 "limit", 1,
                                                 "app-id", self->application_id,
                                                 NULL),
@@ -1032,7 +1029,6 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -1041,7 +1037,7 @@ handle_get_quote_of_the_day (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Create query and run it */
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                "tags-match-any", tags_match_any,
+                                                "tags-match-any", g_variant_builder_end (&tags_match_any_builder),
                                                 "limit", 1,
                                                 "app-id", self->application_id,
                                                 NULL),
@@ -1145,11 +1141,10 @@ handle_get_recent_news (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknArticleObject");
-    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Create query and run it */
     g_autoptr(EkncQueryObject) query = g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                     "tags-match-any", tags_match_any,
+                                                     "tags-match-any", g_variant_builder_end (&tags_match_any_builder),
                                                      "sort", EKNC_QUERY_OBJECT_SORT_DATE,
                                                      "order", EKNC_QUERY_OBJECT_ORDER_DESCENDING,
                                                      "limit", NUMBER_OF_ARTICLES,
@@ -1265,8 +1260,6 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     GVariantBuilder tags_match_any_builder;
     g_variant_builder_init (&tags_match_any_builder, G_VARIANT_TYPE ("as"));
     g_variant_builder_add (&tags_match_any_builder, "s", "EknMediaObject");
-    
-    g_autoptr(GVariant) tags_match_any = g_variant_builder_end (&tags_match_any_builder);
 
     /* Hold the application so that it doesn't go away whilst we're handling
      * the query */
@@ -1275,7 +1268,7 @@ handle_get_videos (EksDiscoveryFeedDatabaseContentProvider *skeleton,
     /* Create query and run it */
     query_with_wraparound_offset (engine,
                                   g_object_new (EKNC_TYPE_QUERY_OBJECT,
-                                                "tags-match-any", tags_match_any,
+                                                "tags-match-any", g_variant_builder_end (&tags_match_any_builder),
                                                 "limit", SENSIBLE_QUERY_LIMIT,
                                                 "app-id", self->application_id,
                                                 NULL),
