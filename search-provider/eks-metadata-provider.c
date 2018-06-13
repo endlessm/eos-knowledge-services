@@ -623,7 +623,7 @@ add_default_query_parameters (GVariant *query_parameters)
 
   if (!g_variant_dict_contains (vardict, "limit"))
     {
-      g_variant_dict_insert (vardict, "limit", "u", G_MAXUINT)
+      g_variant_dict_insert (vardict, "limit", "u", G_MAXUINT);
     }
 
   return g_variant_dict_end (vardict);
