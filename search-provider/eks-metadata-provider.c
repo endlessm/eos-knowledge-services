@@ -680,6 +680,8 @@ create_query_from_dbus_query_parameters (GVariant     *query_parameters,
   GVariant *iter_value;
 
   g_autoptr(GArray) values_array = g_array_new (FALSE, TRUE, sizeof (GValue));
+  g_array_set_clear_func (values_array, (GDestroyNotify) g_value_unset);
+
   g_autoptr(GPtrArray) props_array = g_ptr_array_new_with_free_func (g_free);
 
   /* Always add the app-id to the query */
