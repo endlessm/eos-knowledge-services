@@ -264,6 +264,7 @@ json_node_from_object_with_nulls_recursively_removed (JsonObject *object)
   return json_builder_get_root (builder);
 }
 
+/* Returns a non-floating reference via its out-param */
 static gboolean
 gvalue_to_variant_internal (GValue              *value,
                             const GVariantType  *expected_type,
@@ -291,9 +292,9 @@ gvalue_to_variant_internal (GValue              *value,
       g_autoptr(JsonNode) dbus_safe_json_node =
         json_node_from_object_with_nulls_recursively_removed (vardict_object);
 
-      *out_variant = json_gvariant_deserialize (dbus_safe_json_node,
-                                                NULL,
-                                                error);
+      *out_variant = g_variant_ref_sink(json_gvariant_deserialize (dbus_safe_json_node,
+                                                                   NULL,
+                                                                   error));
       return *out_variant != NULL;
     }
 
@@ -338,7 +339,9 @@ maybe_add_key_value_pair_from_model_to_variant (EkncContentObjectModel  *model,
 
   /* Need to use a different name here as the name between the interface
    * and the internal model key can vary */
-  add_key_value_pair_to_variant (builder, model_key, g_steal_pointer (&converted));
+  add_key_value_pair_to_variant (builder,
+                                 model_key,
+                                 converted);
   return TRUE;
 }
 
@@ -457,7 +460,7 @@ on_received_query_results (GObject      *source,
    * them via g_variant_ref_sink, so we need to steal the pointer */
   results_tuple_array[0] = g_variant_new ("(@a{sv}@aa{sv})",
                                           g_variant_dict_end (&result_metadata),
-                                          g_steal_pointer (&models_variant));
+                                          models_variant);
 
   eks_content_metadata_complete_query (state->provider->skeleton,
                                        state->invocation,
