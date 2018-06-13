@@ -221,6 +221,7 @@ static const ModelVariantTypes model_variant_types[] = {
   { "content_type", G_VARIANT_TYPE_STRING },
   { "copyright_holder", G_VARIANT_TYPE_STRING },
   { "discovery_feed_content", G_VARIANT_TYPE_VARDICT },
+  { "featured", G_VARIANT_TYPE_BOOLEAN },
   { "id", G_VARIANT_TYPE_STRING },
   { "language", G_VARIANT_TYPE_STRING },
   { "last_modified_date", G_VARIANT_TYPE_STRING },
