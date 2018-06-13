@@ -19,7 +19,7 @@
 #define DAYS_IN_YEAR 365
 #define SENSIBLE_QUERY_LIMIT G_MAXUINT
 
-struct _EksDiscoveryFeedProvider
+struct _EksDiscoveryFeedDatabaseContentProvider
 {
   GObject parent_instance;
 
