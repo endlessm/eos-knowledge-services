@@ -292,9 +292,9 @@ gvalue_to_variant_internal (GValue              *value,
       g_autoptr(JsonNode) dbus_safe_json_node =
         json_node_from_object_with_nulls_recursively_removed (vardict_object);
 
-      *out_variant = g_variant_ref_sink(json_gvariant_deserialize (dbus_safe_json_node,
-                                                                   NULL,
-                                                                   error));
+      *out_variant = g_variant_ref_sink (json_gvariant_deserialize (dbus_safe_json_node,
+                                                                    NULL,
+                                                                    error));
       return *out_variant != NULL;
     }
 
