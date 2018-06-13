@@ -153,6 +153,117 @@ add_key_value_pair_to_variant (GVariantBuilder *builder,
   g_variant_builder_close (builder);
 }
 
+static void add_dbus_friendly_keys_recurse_into_json_structure (JsonBuilder  *builder,
+                                                                JsonNode     *node,
+                                                                JsonNodeType  node_type);
+
+static void
+copy_non_null_json_object_key (JsonObject  *source_object,
+                               const gchar *member_name,
+                               JsonNode    *member_node,
+                               gpointer     user_data)
+{
+  JsonBuilder *builder = user_data;
+  JsonNodeType member_node_type = json_node_get_node_type (member_node);
+
+  switch (member_node_type)
+    {
+      case JSON_NODE_OBJECT:
+      case JSON_NODE_ARRAY:
+        json_builder_set_member_name (builder, member_name);
+        add_dbus_friendly_keys_recurse_into_json_structure (builder,
+                                                            member_node,
+                                                            member_node_type);
+        break;
+      case JSON_NODE_VALUE:
+        json_builder_set_member_name (builder, member_name);
+        json_builder_add_value (builder, json_node_ref (member_node));
+        break;
+      case JSON_NODE_NULL:
+        break;
+    }
+}
+
+static void
+build_dbus_friendly_json_object_from_object (JsonBuilder *builder,
+                                             JsonObject  *object)
+{
+  json_builder_begin_object (builder);
+  json_object_foreach_member (object,
+                              copy_non_null_json_object_key,
+                              builder);
+  json_builder_end_object (builder);
+}
+
+static void
+copy_non_null_json_array_element (JsonArray  *source_array,
+                                  guint       member_index,
+                                  JsonNode   *member_node,
+                                  gpointer    user_data)
+{
+  JsonBuilder *builder = user_data;
+  JsonNodeType member_node_type = json_node_get_node_type (member_node);
+
+  switch (member_node_type)
+    {
+      case JSON_NODE_OBJECT:
+      case JSON_NODE_ARRAY:
+        add_dbus_friendly_keys_recurse_into_json_structure (builder,
+                                                            member_node,
+                                                            member_node_type);
+        break;
+      case JSON_NODE_VALUE:
+        json_builder_add_value (builder, json_node_ref (member_node));
+        break;
+      case JSON_NODE_NULL:
+        break;
+    }
+}
+
+static void
+build_dbus_friendly_json_array_from_array (JsonBuilder *builder,
+                                           JsonArray   *array)
+{
+  json_builder_begin_array (builder);
+  json_array_foreach_element (array,
+                              copy_non_null_json_array_element,
+                              builder);
+  json_builder_end_array (builder);
+}
+
+static void
+add_dbus_friendly_keys_recurse_into_json_structure (JsonBuilder  *builder,
+			                            JsonNode     *node,
+			                            JsonNodeType  node_type)
+{
+  switch (node_type)
+    {
+      case JSON_NODE_OBJECT:
+        build_dbus_friendly_json_object_from_object (builder,
+                                                     json_node_get_object (node));
+        break;
+      case JSON_NODE_ARRAY:
+        build_dbus_friendly_json_array_from_array (builder,
+                                                   json_node_get_array (node));
+        break;
+      default:
+        g_assert_not_reached();
+    }
+}
+
+/* The d-bus wire protocol doesn't support maybe types,
+ * but GVariant does. The way that this is handled in consuming
+ * applications is to check if the property exists on the vardict,
+ * so remove all NULL-valued properties from this object recursively. */
+static JsonNode *
+json_node_from_object_with_nulls_recursively_removed (JsonObject *object)
+{
+  g_autoptr(JsonBuilder) builder = json_builder_new ();
+
+  build_dbus_friendly_json_object_from_object (builder, object);
+  return json_builder_get_root (builder);
+}
+
 static gboolean
 gvalue_to_variant_internal (GValue              *value,
                             const GVariantType  *expected_type,
@@ -162,11 +273,28 @@ gvalue_to_variant_internal (GValue              *value,
   g_return_val_if_fail (out_variant != NULL, FALSE);
 
   /* Special case: if expected_type is G_VARIANT_TYPE_VARDICT then we need
-   * to dup the variant directly. */
+   * to serialize to JsonObject, prune any NULL values, then deserialize back
+   * again like we do in other eos-knowledge-services versions. */
   if (expected_type == G_VARIANT_TYPE_VARDICT)
     {
-      *out_variant = g_value_dup_variant (value);
-      return TRUE;
+      GVariant *vardict = g_value_get_variant (value);
+
+      if (vardict == NULL)
+        {
+          *out_variant = NULL;
+          return TRUE;
+        }
+
+      g_autoptr(JsonNode) vardict_json_node =
+        json_gvariant_serialize (vardict);
+      JsonObject *vardict_object = json_node_get_object (vardict_json_node);
+      g_autoptr(JsonNode) dbus_safe_json_node =
+        json_node_from_object_with_nulls_recursively_removed (vardict_object);
+
+      *out_variant = json_gvariant_deserialize (dbus_safe_json_node,
+                                                NULL,
+                                                error);
+      return *out_variant != NULL;
     }
 
   *out_variant = g_dbus_gvalue_to_gvariant (value, expected_type);
