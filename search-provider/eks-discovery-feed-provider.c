@@ -17,9 +17,9 @@
 
 #define NUMBER_OF_ARTICLES 5
 #define DAYS_IN_YEAR 365
-#define SENSIBLE_QUERY_LIMIT 500
+#define SENSIBLE_QUERY_LIMIT G_MAXUINT
 
-struct _EksDiscoveryFeedDatabaseContentProvider
+struct _EksDiscoveryFeedProvider
 {
   GObject parent_instance;
 
