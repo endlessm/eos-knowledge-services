@@ -614,6 +614,21 @@ clear_gparameter_with_allocated_name (GParameter *parameter)
   g_value_unset (&parameter->value);
 }
 
+/* Add "limit" if it isn't present, otherwise xapian-bridge
+ * will complain. */
+static GVariant *
+add_default_query_parameters (GVariant *query_parameters)
+{
+  g_autoptr(GVariantDict) vardict = g_variant_dict_new (query_parameters);
+
+  if (!g_variant_dict_contains (vardict, "limit"))
+    {
+      g_variant_dict_insert (vardict, "limit", "u", G_MAXUINT)
+    }
+
+  return g_variant_dict_end (vardict);
+}
+
 static EkncQueryObject *
 create_query_from_dbus_query_parameters (GVariant     *query_parameters,
                                          const char   *application_id,
@@ -631,6 +646,9 @@ create_query_from_dbus_query_parameters (GVariant     *query_parameters,
   append_construction_prop_from_string ("app-id",
                                         application_id,
                                         parameters_array);
+
+  g_autoptr(GVariant) query_parameters_with_defaults =
+    g_variant_ref_sink (add_default_query_parameters (query_parameters));
 
   g_variant_iter_init (&iter, query_parameters);
   while (g_variant_iter_next (&iter, "{sv}", &iter_key, &iter_value))
