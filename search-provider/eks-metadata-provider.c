@@ -781,7 +781,7 @@ create_query_from_dbus_query_parameters (GVariant     *query_parameters,
   g_autoptr(GVariant) query_parameters_with_defaults =
     g_variant_ref_sink (add_default_query_parameters (query_parameters));
 
-  g_variant_iter_init (&iter, query_parameters);
+  g_variant_iter_init (&iter, query_parameters_with_defaults);
   while (g_variant_iter_next (&iter, "{sv}", &iter_key, &iter_value))
     {
       g_autofree char *key = iter_key;
