@@ -161,14 +161,13 @@ queries are supported in the array.
 ## Companion App Service - Use Session Bus
 The Companion App Service will use its own private session bus, which will
 allow it to autostart eos-knowledge-services for the companion-app-helper
-user. This was done in
-[https://github.com/endlessm/eos-companion-app-integration/pull/72](https://github.com/endlessm/eos-companion-app-integration/pull/72)
+user. This was done in https://github.com/endlessm/eos-companion-app-integration/pull/72
 
 ## Companion App Service - Use EknServices
 The Companion App Service should stop using ekncontent and instead use
 EknServices to do all of its queries. This will be implemented through an
 abstraction layer which can be mocked out at test time.
-See [https://github.com/endlessm/eos-companion-app-integration/pull/74](https://github.com/endlessm/eos-companion-app-integration/pull/74)
+See https://github.com/endlessm/eos-companion-app-integration/pull/74
 
 ## Companion App Service - Detect which EknServices to use
 Right now the Companion App Service assumes that verison 3 is in use. It
