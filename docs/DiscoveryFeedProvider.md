@@ -75,7 +75,7 @@ depending on the SDK version in use:
 | 1           | EknServices  | SearchProviderV1    |
 | 2           | EknServices2 | SearchProviderV2    |
 | 3           | EknServices2 | SearchProviderV2    |
-| 4           | EknServices3 | SearchProviderV2    |
+| 4           | EknServices3 | SearchProviderV3    |
 
 The `[encoded_app_id]` is encoded according to the systemd D-Bus object name
 encoding scheme.
