@@ -1,6 +1,6 @@
 # Purpose and Problem Definition
-Previously, the (Companion App Service)[https://github.com/endlessm/eos-companion-app-integration]
-linked to the Platform SDK and (ekncontent/dmodel)[https://github.com/endlessm/libdmodel]
+Previously, the [Companion App Service](https://github.com/endlessm/eos-companion-app-integration)
+linked to the Platform SDK and [ekncontent/dmodel](https://github.com/endlessm/libdmodel)
 directly. This was not a great situation to be in, since it meant that we had
 a hard-dependency on apps from a single SDK version. It is against the SDK’s
 design and Flatpak's design to try and support apps from multiple SDK versions
