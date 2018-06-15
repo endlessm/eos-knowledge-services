@@ -1,9 +1,9 @@
 # Discovery Feed Content Provider
-Like the Search Provider and (Companion App
-Service)[https://github.com/endlessm/eos-companion-app-integration], the
-(Discovery Feed)[https://github.com/endlessm/eos-discovery-feed] cannot have a
+Like the Search Provider and [Companion App
+Service](https://github.com/endlessm/eos-companion-app-integration), the
+[Discovery Feed](https://github.com/endlessm/eos-discovery-feed) cannot have a
 dependency on any particular version of the Endless Content SDK or libraries
-such as (ekncontent/libdmodel)[https://github.com/endlessm/libdmodel].
+such as [ekncontent/libdmodel](https://github.com/endlessm/libdmodel).
 
 The "Discovery Feed Providers" mechanism provides a way to export a consistent
 interface across all SDK versions without having to worry about ABI breaks.
