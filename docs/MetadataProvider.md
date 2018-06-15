@@ -62,7 +62,7 @@ exposed API needs to be flexible enough to deal with anticipated future needs.
 
 ## Flexible Query API for EknServices
 In order to satisfy
-[Companion App Services not dependent on a particular version](#companion-app-services-no-dependent-on-a-particular-version)
+[Companion App Services not dependent on a particular version](#companion-app-service-not-dependent-on-apps-from-a-particular-sdk-version)
 and [Less Development Churn](#less-development-churn) a new API is proposed
 for EknServices called MetadataProvider.
 
