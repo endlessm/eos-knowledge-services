@@ -1,6 +1,6 @@
 # Purpose and Problem Definition
-Previously, the (Companion App Service)[https://github.com/endlessm/eos-companion-app-integration]
-linked to the Platform SDK and (ekncontent/dmodel)[https://github.com/endlessm/libdmodel]
+Previously, the [Companion App Service](https://github.com/endlessm/eos-companion-app-integration)
+linked to the Platform SDK and [ekncontent/dmodel](https://github.com/endlessm/libdmodel)
 directly. This was not a great situation to be in, since it meant that we had
 a hard-dependency on apps from a single SDK version. It is against the SDK’s
 design and Flatpak's design to try and support apps from multiple SDK versions
@@ -62,7 +62,7 @@ exposed API needs to be flexible enough to deal with anticipated future needs.
 
 ## Flexible Query API for EknServices
 In order to satisfy
-[Companion App Services not dependent on a particular version](#companion-app-services-no-dependent-on-a-particular-version)
+[Companion App Services not dependent on a particular version](#companion-app-service-not-dependent-on-apps-from-a-particular-sdk-version)
 and [Less Development Churn](#less-development-churn) a new API is proposed
 for EknServices called MetadataProvider.
 
@@ -161,14 +161,13 @@ queries are supported in the array.
 ## Companion App Service - Use Session Bus
 The Companion App Service will use its own private session bus, which will
 allow it to autostart eos-knowledge-services for the companion-app-helper
-user. This was done in
-[https://github.com/endlessm/eos-companion-app-integration/pull/72](https://github.com/endlessm/eos-companion-app-integration/pull/72)
+user. This was done in https://github.com/endlessm/eos-companion-app-integration/pull/72
 
 ## Companion App Service - Use EknServices
 The Companion App Service should stop using ekncontent and instead use
 EknServices to do all of its queries. This will be implemented through an
 abstraction layer which can be mocked out at test time.
-See [https://github.com/endlessm/eos-companion-app-integration/pull/74](https://github.com/endlessm/eos-companion-app-integration/pull/74)
+See https://github.com/endlessm/eos-companion-app-integration/pull/74
 
 ## Companion App Service - Detect which EknServices to use
 Right now the Companion App Service assumes that verison 3 is in use. It
