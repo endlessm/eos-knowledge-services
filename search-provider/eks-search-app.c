@@ -223,8 +223,10 @@ eks_search_app_node_interface_infos ()
 static void
 eks_search_app_init (EksSearchApp *self)
 {
+  g_autoptr(GPtrArray) interface_infos = eks_search_app_node_interface_infos ();
+
   self->dispatcher = g_object_new (EKS_TYPE_SUBTREE_DISPATCHER,
-                                   "interface-infos", eks_search_app_node_interface_infos (),
+                                   "interface-infos", interface_infos,
                                    NULL);
   self->app_search_providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
   self->discovery_feed_content_providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
