@@ -696,7 +696,7 @@ create_query_from_dbus_query_parameters (GVariant     *query_parameters,
       g_autoptr(GVariant) variant = iter_value;
       ValueTranslationInfo *translation_info = g_hash_table_lookup (translation_infos,
                                                                     key);
-      
+
       if (translation_info == NULL)
         {
           g_set_error (error,
