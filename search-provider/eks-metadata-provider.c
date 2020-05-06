@@ -485,8 +485,6 @@ translate_gvariant_to_gvalue (GVariant  *variant,
   return TRUE;
 }
 
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (GEnumClass, g_type_class_unref)
-
 static gboolean
 translate_gvariant_to_gvalue_parse_enum (GVariant  *variant,
                                          GValue    *value,
