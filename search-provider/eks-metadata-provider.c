@@ -11,8 +11,6 @@
 #include "eks-metadata-provider.h"
 #include "eks-metadata-provider-dbus.h"
 
-#include <eos-shard/eos-shard-shard-file.h>
-
 #include <json-glib/json-glib.h>
 
 #include <stdio.h>

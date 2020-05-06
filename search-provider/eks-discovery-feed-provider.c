@@ -9,7 +9,6 @@
 #include "eks-query-util.h"
 
 #include <dmodel.h>
-#include <eos-shard/eos-shard-shard-file.h>
 
 #include <stdio.h>
 #include <stdlib.h>
