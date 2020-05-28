@@ -3,7 +3,6 @@
 #pragma once
 
 #include <dmodel.h>
-#include <eos-shard/eos-shard-shard-file.h>
 
 #include <gio/gio.h>
 

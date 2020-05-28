@@ -11,8 +11,6 @@
 #include "eks-metadata-provider.h"
 #include "eks-metadata-provider-dbus.h"
 
-#include <eos-shard/eos-shard-shard-file.h>
-
 #include <json-glib/json-glib.h>
 
 #include <stdio.h>
@@ -485,8 +483,6 @@ translate_gvariant_to_gvalue (GVariant  *variant,
   return TRUE;
 }
 
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (GEnumClass, g_type_class_unref)
-
 static gboolean
 translate_gvariant_to_gvalue_parse_enum (GVariant  *variant,
                                          GValue    *value,
@@ -698,7 +694,7 @@ create_query_from_dbus_query_parameters (GVariant     *query_parameters,
       g_autoptr(GVariant) variant = iter_value;
       ValueTranslationInfo *translation_info = g_hash_table_lookup (translation_infos,
                                                                     key);
-      
+
       if (translation_info == NULL)
         {
           g_set_error (error,

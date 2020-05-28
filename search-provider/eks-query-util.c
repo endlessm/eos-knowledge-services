@@ -3,7 +3,6 @@
 #include "eks-query-util.h"
 
 #include <dmodel.h>
-#include <eos-shard/eos-shard-shard-file.h>
 
 #include <gio/gio.h>
 
@@ -76,13 +75,7 @@ strv_from_shard_list (GSList *string_list)
   guint count = 0;
 
   for (GSList *l = string_list; l; l = l->next)
-    {
-      EosShardShardFile *shard = l->data;
-      char *shard_path = NULL;
-
-      g_object_get (shard, "path", &shard_path, NULL);
-      strv[count++] = shard_path;
-    }
+    strv[count++] = g_strdup (dm_shard_get_path (l->data));
 
   return strv;
 }
