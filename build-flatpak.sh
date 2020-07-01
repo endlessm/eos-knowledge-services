@@ -6,7 +6,7 @@ rm -rf files var metadata export build
 BRANCH=${BRANCH:-master}
 GIT_CLONE_BRANCH=${GIT_CLONE_BRANCH:-HEAD}
 RUN_TESTS=${RUN_TESTS:-false}
-PROJECT=${PROJECT:-com.endlessm.EknServices3}
+PROJECT=${PROJECT:-com.endlessm.EknServices4}
 
 sed \
   -e "s|@BRANCH@|${BRANCH}|g" \
