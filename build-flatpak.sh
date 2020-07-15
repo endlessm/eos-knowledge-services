@@ -3,7 +3,7 @@ set -e
 set -x
 rm -rf files var metadata export build
 
-BRANCH=${BRANCH:-master}
+BRANCH=${BRANCH:-stable}
 GIT_CLONE_BRANCH=${GIT_CLONE_BRANCH:-HEAD}
 RUN_TESTS=${RUN_TESTS:-false}
 PROJECT=${PROJECT:-com.endlessm.EknServices4}
